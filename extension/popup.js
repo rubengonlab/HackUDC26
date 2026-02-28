@@ -141,7 +141,7 @@ btnGuardar.addEventListener('click', async () => {
         } else throw new Error("Error del servidor");
       } catch (err) {
         estadoDiv.innerText = "";
-        mostrarNotificacion("Error al guardar nota", "Backend local no disponible", true);
+        mostrarNotificacion("Error al guardar nota", "Error en el servidor", true);
       }
     });
   });
