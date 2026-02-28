@@ -6,6 +6,7 @@ import java.util.regex.Pattern;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -32,6 +33,7 @@ import jakarta.validation.Valid;
 
 @Tag(name = "Texto", description = "Creacion de recursos de texto (nota o enlace).")
 @RestController
+@CrossOrigin(origins="*")
 @RequestMapping("/text")
 public class TextController {
 
