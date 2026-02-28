@@ -23,6 +23,8 @@ public class TextResourceConversor {
         dto.setKind("NOTE");
         dto.setId(note.getId());
         dto.setContent(note.getContent());
+        dto.setReorderedText(note.getReorderedText());
+        dto.setTextStatus(note.getTextStatus() != null ? note.getTextStatus().name() : null);
         return dto;
     }
 

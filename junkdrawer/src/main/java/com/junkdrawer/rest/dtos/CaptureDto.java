@@ -52,6 +52,8 @@ public class CaptureDto {
     public static class NoteDataDto {
         private Long id;
         private String content;
+        private String reorderedText;
+        private String textStatus;
 
         public Long getId() {
             return id;
@@ -67,6 +69,22 @@ public class CaptureDto {
 
         public void setContent(String content) {
             this.content = content;
+        }
+
+        public String getReorderedText() {
+            return reorderedText;
+        }
+
+        public void setReorderedText(String reorderedText) {
+            this.reorderedText = reorderedText;
+        }
+
+        public String getTextStatus() {
+            return textStatus;
+        }
+
+        public void setTextStatus(String textStatus) {
+            this.textStatus = textStatus;
         }
     }
 

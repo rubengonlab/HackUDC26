@@ -20,11 +20,15 @@ public class BedrockNovaService {
     public record AiProcessingResult(String category, String title) {
     }
 
+    public record NoteAiProcessingResult(String category, String title, String reorderedText) {
+    }
+
     private final BedrockRuntimeClient bedrockClient;
     private final ObjectMapper objectMapper;
     private static final String MODEL_ID = "amazon.nova-lite-v1:0";
     private static final String RESPONSE_FIELD = "response";
     private static final String TITLE_FIELD = "title";
+    private static final String REORDERED_TEXT_FIELD = "reorderedText";
 
     public BedrockNovaService() {
         this.bedrockClient = BedrockRuntimeClient.builder()
@@ -40,6 +44,31 @@ public class BedrockNovaService {
 
     public AiProcessingResult procesarTexto(List<String> categories, String text) {
         String prompt = buildPrompt(categories, text);
+        String rawResponse = executePrompt(prompt);
+
+        return extractResponse(rawResponse);
+    }
+
+    public NoteAiProcessingResult procesarNota(List<String> categories, String text) {
+        String prompt = buildNotePrompt(categories, text);
+        String rawResponse = executePrompt(prompt);
+
+        JsonNode root = parseJsonNode(rawResponse.trim());
+        AiProcessingResult baseResult = extractResponse(rawResponse);
+
+        JsonNode reorderedTextNode = root.get(REORDERED_TEXT_FIELD);
+        String reorderedText = null;
+        if (reorderedTextNode != null && !reorderedTextNode.isNull()) {
+            String parsed = reorderedTextNode.asText().trim();
+            if (!parsed.isEmpty()) {
+                reorderedText = parsed;
+            }
+        }
+
+        return new NoteAiProcessingResult(baseResult.category(), baseResult.title(), reorderedText);
+    }
+
+    private String executePrompt(String prompt) {
 
         Message message = Message.builder()
                 .content(ContentBlock.fromText(prompt))
@@ -53,8 +82,7 @@ public class BedrockNovaService {
 
         try {
             ConverseResponse response = bedrockClient.converse(request);
-            String rawResponse = response.output().message().content().get(0).text();
-            return extractResponse(rawResponse);
+            return response.output().message().content().get(0).text();
         } catch (Exception e) {
             System.err.println("Error al invocar Bedrock: " + e.getMessage());
             throw new RuntimeException("Fallo en la comunicación con AWS Bedrock", e);
@@ -88,6 +116,35 @@ public class BedrockNovaService {
 
                 Formato de salida esperado:
                 {"response":"nombre_de_la_categoria_elegida","title":"titulo_resumido"}
+                """.formatted(categoriesJson, text);
+    }
+
+    private String buildNotePrompt(List<String> categories, String text) {
+        String categoriesJson = categories.stream()
+                .map(this::toJsonString)
+                .collect(Collectors.joining(", ", "[", "]"));
+
+        return """
+                Eres un sistema estricto para procesar notas.
+                Debes clasificar la nota, crear un titulo corto y reescribirla con mejor redaccion y estructura.
+
+                <categorias_permitidas>
+                %s
+                </categorias_permitidas>
+
+                <nota_original>
+                %s
+                </nota_original>
+
+                Instrucciones obligatorias:
+                1. Clasifica la nota en EXACTAMENTE una categoria permitida.
+                2. Si no encaja, usa "sin_categoria".
+                3. Genera "title" con maximo 7 palabras.
+                4. Genera "reorderedText" bien redactado, claro y estructurado.
+                5. Devuelve SOLO un JSON valido sin texto adicional.
+
+                Formato:
+                {"response":"categoria","title":"titulo","reorderedText":"texto_reordenado"}
                 """.formatted(categoriesJson, text);
     }
 

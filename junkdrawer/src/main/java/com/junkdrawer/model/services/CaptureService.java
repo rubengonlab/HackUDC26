@@ -1,6 +1,7 @@
 package com.junkdrawer.model.services;
 
 import java.time.LocalDate;
+import java.util.List;
 
 import com.junkdrawer.model.common.InstanceNotFoundException;
 import com.junkdrawer.model.entities.Capture;
@@ -17,4 +18,8 @@ public interface CaptureService {
 
     Block<Capture> getCaptures(LocalDate dateFrom, LocalDate dateTo, Long categoryId, Capture.CaptureType captureType,
             int page, int size);
+
+    List<Capture.CaptureType> getUsedCaptureTypes();
+
+    Block<LocalDate> getCaptureDays(int page, int size);
 }

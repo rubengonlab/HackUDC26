@@ -53,6 +53,8 @@ public class CaptureConversor {
         CaptureDto.NoteDataDto dto = new CaptureDto.NoteDataDto();
         dto.setId(note.getId());
         dto.setContent(note.getContent());
+        dto.setReorderedText(note.getReorderedText());
+        dto.setTextStatus(note.getTextStatus() != null ? note.getTextStatus().name() : null);
         return dto;
     }
 

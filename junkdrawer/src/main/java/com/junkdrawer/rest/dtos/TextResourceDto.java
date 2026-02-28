@@ -34,6 +34,12 @@ public class TextResourceDto {
     @Schema(description = "Contenido para NOTE", example = "Mejorar onboarding")
     private String content;
 
+    @Schema(description = "Texto de NOTE reordenado y mejor redactado", example = "Objetivo: mejorar onboarding. Acciones: ...")
+    private String reorderedText;
+
+    @Schema(description = "Estado del procesamiento del texto de NOTE", example = "PROCESSED")
+    private String textStatus;
+
     @Schema(description = "URL para LINK", example = "https://docs.spring.io")
     private String url;
 
@@ -113,6 +119,22 @@ public class TextResourceDto {
 
     public void setContent(String content) {
         this.content = content;
+    }
+
+    public String getReorderedText() {
+        return reorderedText;
+    }
+
+    public void setReorderedText(String reorderedText) {
+        this.reorderedText = reorderedText;
+    }
+
+    public String getTextStatus() {
+        return textStatus;
+    }
+
+    public void setTextStatus(String textStatus) {
+        this.textStatus = textStatus;
     }
 
     public String getUrl() {

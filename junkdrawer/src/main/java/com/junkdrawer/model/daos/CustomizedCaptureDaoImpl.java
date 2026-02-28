@@ -1,5 +1,7 @@
 package com.junkdrawer.model.daos;
 
+import java.sql.Date;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -11,6 +13,7 @@ import com.junkdrawer.model.entities.Capture;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import jakarta.persistence.Query;
 import jakarta.persistence.TypedQuery;
 
 public class CustomizedCaptureDaoImpl implements CustomizedCaptureDao {
@@ -72,5 +75,48 @@ public class CustomizedCaptureDaoImpl implements CustomizedCaptureDao {
         }
 
         return new SliceImpl<>(items, PageRequest.of(page, size), hasNext);
+    }
+
+    @Override
+    public List<Capture.CaptureType> getUsedCaptureTypes() {
+        TypedQuery<Capture.CaptureType> query = entityManager.createQuery(
+                "SELECT DISTINCT c.captureType FROM Capture c ORDER BY c.captureType",
+                Capture.CaptureType.class);
+
+        return query.getResultList();
+    }
+
+    @Override
+    public Slice<LocalDate> getCaptureDays(int page, int size) {
+        Query query = entityManager.createNativeQuery(
+                "SELECT DISTINCT CAST(createdAt AS DATE) AS captureDay "
+                        + "FROM Capture "
+                        + "ORDER BY captureDay DESC");
+
+        query.setFirstResult(page * size);
+        query.setMaxResults(size + 1);
+
+        @SuppressWarnings("unchecked")
+        List<Object> rawItems = query.getResultList();
+        boolean hasNext = rawItems.size() == (size + 1);
+        if (hasNext) {
+            rawItems.remove(rawItems.size() - 1);
+        }
+
+        List<LocalDate> items = rawItems.stream()
+                .map(this::toLocalDate)
+                .toList();
+
+        return new SliceImpl<>(items, PageRequest.of(page, size), hasNext);
+    }
+
+    private LocalDate toLocalDate(Object value) {
+        if (value instanceof LocalDate localDate) {
+            return localDate;
+        }
+        if (value instanceof Date date) {
+            return date.toLocalDate();
+        }
+        return LocalDate.parse(value.toString());
     }
 }
