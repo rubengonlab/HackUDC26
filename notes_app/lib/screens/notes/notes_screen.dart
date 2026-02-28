@@ -1,13 +1,16 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../../models/index.dart';
 import '../../providers/index.dart';
+import '../../widgets/notes/index.dart';
+
 class NotesScreen extends StatefulWidget {
   const NotesScreen({super.key});
   @override
   State<NotesScreen> createState() => _NotesScreenState();
 }
+
 class _NotesScreenState extends State<NotesScreen> {
   static const _kBg = Color(0xFF1A1F4D);
   static const _kPrimary = Color(0xFFFF5856);
@@ -50,12 +53,15 @@ class _NotesScreenState extends State<NotesScreen> {
           );
         },
       ),
-      floatingActionButton: FloatingActionButton(
-        heroTag: 'new_note_fab',
-        onPressed: () {},
-        backgroundColor: _kPrimary,
-        tooltip: 'Nueva nota',
-        child: const Icon(Icons.mic, color: Colors.white, size: 26),
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 16),
+        child: FloatingActionButton(
+          heroTag: 'new_note_fab',
+          onPressed: () => showNewNoteSheet(context),
+          backgroundColor: _kPrimary,
+          tooltip: 'Nueva nota',
+          child: const Icon(Icons.add, color: Colors.white, size: 28),
+        ),
       ),
     );
   }

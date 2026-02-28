@@ -153,10 +153,6 @@ class CategoriesProvider extends ChangeNotifier {
       _error = e.message;
       _isLoading = false;
       notifyListeners();
-    } on TimeoutException catch (e) {
-      _error = e.message;
-      _isLoading = false;
-      notifyListeners();
     } on NetworkException catch (e) {
       _error = e.message;
       _isLoading = false;
@@ -215,33 +211,27 @@ class CategoriesProvider extends ChangeNotifier {
         try {
           await ApiService.createCategory(category.name);
         } on BadRequestException catch (e) {
-          // Si la categoría ya existe en el servidor, continuamos con la siguiente
-          if (e.message.toLowerCase().contains('duplicada') ||
-              e.message.toLowerCase().contains('existe') ||
-              e.message.toLowerCase().contains('duplicate') ||
-              e.message.toLowerCase().contains('already')) {
-            continue;
+            if (e.message.toLowerCase().contains('duplicada') ||
+                e.message.toLowerCase().contains('existe') ||
+                e.message.toLowerCase().contains('duplicate') ||
+                e.message.toLowerCase().contains('already')) {
+              continue;
+            }
+            _error = e.message;
+            _isSyncingCategories = false;
+            notifyListeners();
+            return false;
+          } on NetworkException catch (e) {
+            _error = e.message;
+            _isSyncingCategories = false;
+            notifyListeners();
+            return false;
+          } on ServerException catch (e) {
+            _error = e.message;
+            _isSyncingCategories = false;
+            notifyListeners();
+            return false;
           }
-          _error = e.message;
-          _isSyncingCategories = false;
-          notifyListeners();
-          return false;
-        } on TimeoutException catch (e) {
-          _error = e.message;
-          _isSyncingCategories = false;
-          notifyListeners();
-          return false;
-        } on NetworkException catch (e) {
-          _error = e.message;
-          _isSyncingCategories = false;
-          notifyListeners();
-          return false;
-        } on ServerException catch (e) {
-          _error = e.message;
-          _isSyncingCategories = false;
-          notifyListeners();
-          return false;
-        }
       }
 
       _isSyncingCategories = false;
