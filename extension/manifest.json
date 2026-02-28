@@ -1,0 +1,13 @@
+{
+  "manifest_version": 3,
+  "name": "JunkDrawer: Capturador",
+  "version": "0.0",
+  "description": "Captura textos y notas para mi Segundo Cerebro",
+  "permissions": ["contextMenus", "activeTab"],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "service_worker": "background.js"
+  }
+}
