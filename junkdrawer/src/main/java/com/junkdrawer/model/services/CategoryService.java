@@ -8,7 +8,7 @@ import com.junkdrawer.model.entities.Category;
 
 public interface CategoryService {
 
-    Category createCategory(String name) throws DuplicateInstanceException;
+    void createCategory(String name);
 
     Category getCategory(Long id) throws InstanceNotFoundException;
 

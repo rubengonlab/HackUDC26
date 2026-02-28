@@ -23,15 +23,13 @@ public class CategoryServiceImpl implements CategoryService {
     private PermissionChecker permissionChecker;
 
     @Override
-    public Category createCategory(String name) throws DuplicateInstanceException {
+    public void createCategory(String name) {
         Optional<Category> optional = categoryDao.findByName(name);
 
-        if (optional.isPresent()) {
-            throw new DuplicateInstanceException("project.entities.category", name);
+        if (!optional.isPresent()) {
+            Category category = new Category(name);
+            categoryDao.save(category);
         }
-
-        Category category = new Category(name);
-        return categoryDao.save(category);
     }
 
     @Override

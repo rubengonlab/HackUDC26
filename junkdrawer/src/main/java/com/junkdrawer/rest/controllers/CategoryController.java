@@ -47,10 +47,8 @@ public class CategoryController {
     })
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public CategoryDto createCategory(@Valid @RequestBody CreateCategoryParamsDto params)
-            throws DuplicateInstanceException {
-        Category category = categoryService.createCategory(params.getName());
-        return categoryConversor.toCategoryDto(category);
+    public void createCategory(@Valid @RequestBody CreateCategoryParamsDto params) {
+        categoryService.createCategory(params.getName());
     }
 
     @Operation(summary = "Obtener categoria", description = "Obtiene una categoria por id.")
