@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Kelea JunkDrawer",
+  "name": "Kelea Notes.",
   "version": "1.0",
   "description": "Captura de notas y audios para el Segundo Cerebro",
   "permissions": ["contextMenus", "activeTab", "storage"],
