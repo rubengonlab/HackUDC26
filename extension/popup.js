@@ -50,10 +50,10 @@ document.getElementById('btnGuardar').addEventListener('click', async () => {
   chrome.storage.local.get(['username'], async function(result) {
     chrome.tabs.query({active: true, currentWindow: true}, async (tabs) => {
       try {
-        const res = await fetch("http://localhost:8080/junkdrawer/text", {
+        const res = await fetch("http://10.20.29.99:8080/junkdrawer/text", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ content: texto, url: tabs[0].url, type: "MANUAL_NOTE", author: result.username })
+          body: JSON.stringify({ content: texto })
         });
 
         if (res.ok) {
@@ -125,7 +125,12 @@ btnGrabar.addEventListener('click', async () => {
 });
 
 btnDetener.addEventListener('click', () => {
-  if (mediaRecorder && mediaRecorder.state === 'recording') { grabacionCancelada = false; mediaRecorder.stop(); }
+  if (mediaRecorder && mediaRecorder.state === 'recording') { 
+    grabacionCancelada = false; 
+    btnDetener.classList.remove('recording-pulse'); 
+    mediaRecorder.stop(); 
+    resetUI(); 
+  }
 });
 
 btnCancelar.addEventListener('click', () => {
@@ -140,7 +145,7 @@ async function enviarAudioAlBackend(audioBlob) {
   formData.append('file', audioBlob, 'nota_voz.webm');
 
   try {
-    const response = await fetch("http://localhost:8080/junkdrawer/audio", { method: "POST", body: formData });
+    const response = await fetch("http://10.20.29.99:8080/junkdrawer/audio", { method: "POST", body: formData });
     if (response.ok) {
       estadoDiv.innerText = "¡Audio guardado!";
       estadoDiv.style.color = colors.success;
