@@ -42,10 +42,18 @@ chrome.storage.local.get(['notaPendiente'], function(result) {
 
 // Sistema de Login básico
 chrome.storage.local.get(['isLoggedIn'], function(result) {
-  if (result.isLoggedIn) { pantallaApp.style.display = 'flex'; } 
-  else { pantallaLogin.style.display = 'flex'; }
+  // Primero ocultamos todo
+  pantallaApp.style.display = 'none';
+  pantallaLogin.style.display = 'none';
+
+  if (result.isLoggedIn) { 
+    pantallaApp.style.display = 'flex'; 
+  } else { 
+    pantallaLogin.style.display = 'flex'; 
+  }
 });
 
+// Y en el evento btnEntrar:
 document.getElementById('btnEntrar').addEventListener('click', () => {
   const user = document.getElementById('fakeUser').value;
   if (user) {
