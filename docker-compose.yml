@@ -1,0 +1,20 @@
+services:
+  backend:
+    build:
+      context: ./junkdrawer
+      dockerfile: Dockerfile
+      network: host
+    container_name: backend
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    restart: unless-stopped
+    networks:
+      - junkdrawer-network
+  ### AÑADIR MÁS SERVICIOS
+
+
+networks:
+  junkdrawer-network:
+    driver: bridge
