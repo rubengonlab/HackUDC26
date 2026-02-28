@@ -151,7 +151,7 @@ public class AudioServiceImpl implements AudioService {
             if (parsedText == null) {
                 capture.setCategoryStatus(Capture.CategoryStatus.UNCATEGORIZED);
                 captureDao.save(capture);
-                logger.warn("Audio sin transcripcion disponible; no se puede clasificar por contenido");
+                logger.warn(" transcripcion disponible; no se puede clasificar por contenido");
                 return;
             }
 
