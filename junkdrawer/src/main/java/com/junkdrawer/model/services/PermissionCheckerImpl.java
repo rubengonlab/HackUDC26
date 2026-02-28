@@ -7,9 +7,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.junkdrawer.model.common.InstanceNotFoundException;
+import com.junkdrawer.model.daos.AudioDao;
 import com.junkdrawer.model.daos.CaptureDao;
 import com.junkdrawer.model.daos.CategoryDao;
 import com.junkdrawer.model.daos.NoteDao;
+import com.junkdrawer.model.entities.Audio;
 import com.junkdrawer.model.entities.Capture;
 import com.junkdrawer.model.entities.Category;
 import com.junkdrawer.model.entities.Note;
@@ -26,6 +28,9 @@ public class PermissionCheckerImpl implements PermissionChecker {
 
     @Autowired
     private NoteDao noteDao;
+
+    @Autowired
+    private AudioDao audioDao;
 
     @Override
     public Category checkCategoryExists(Long categoryId) throws InstanceNotFoundException {
@@ -55,6 +60,17 @@ public class PermissionCheckerImpl implements PermissionChecker {
 
         if (!optional.isPresent()) {
             throw new InstanceNotFoundException("project.entities.note", noteId);
+        }
+
+        return optional.get();
+    }
+
+    @Override
+    public Audio checkAudioExists(Long audioId) throws InstanceNotFoundException {
+        Optional<Audio> optional = audioDao.findById(audioId);
+
+        if (!optional.isPresent()) {
+            throw new InstanceNotFoundException("project.entities.audio", audioId);
         }
 
         return optional.get();

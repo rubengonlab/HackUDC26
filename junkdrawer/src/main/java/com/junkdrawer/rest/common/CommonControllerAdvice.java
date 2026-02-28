@@ -106,4 +106,11 @@ public class CommonControllerAdvice {
 
         return new ErrorsDto(errorMessage);
     }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    @ResponseBody
+    public ErrorsDto handleIllegalArgumentException(IllegalArgumentException exception) {
+        return new ErrorsDto(exception.getMessage());
+    }
 }
