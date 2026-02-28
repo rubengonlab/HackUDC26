@@ -18,9 +18,14 @@ class CategoryChip extends StatelessWidget {
   });
 
   Color _parseColor(String colorString) {
-    final String colorStr =
-        colorString.replaceAll('#', '').replaceAll('FF', '');
-    return Color(int.parse('FF$colorStr', radix: 16));
+    // El color viene en formato '#AARRGGBB' o '#RRGGBB'
+    final String hex = colorString.replaceAll('#', '');
+    if (hex.length == 8) {
+      return Color(int.parse(hex, radix: 16));
+    } else if (hex.length == 6) {
+      return Color(int.parse('FF$hex', radix: 16));
+    }
+    return const Color(0xFFFF5856); // fallback color Kelea
   }
 
   @override

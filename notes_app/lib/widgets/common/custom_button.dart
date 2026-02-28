@@ -24,9 +24,22 @@ class CustomButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Cuando isLoading=true: pasamos un callback vacío (no null) para que el botón
+    // mantenga su color activo y muestre el spinner. La guard dentro de onPressed
+    // del llamador ya previene la doble ejecución.
+    // Cuando !isEnabled: null para mostrar el estado deshabilitado.
+    VoidCallback? resolvedOnPressed;
+    if (!isEnabled) {
+      resolvedOnPressed = null;
+    } else if (isLoading) {
+      resolvedOnPressed = () {}; // bloqueado visualmente por el spinner
+    } else {
+      resolvedOnPressed = onPressed;
+    }
+
     final button = isPrimary
         ? ElevatedButton(
-            onPressed: isEnabled && !isLoading ? onPressed : null,
+            onPressed: resolvedOnPressed,
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFFF5856),
               foregroundColor: Colors.white,
@@ -38,7 +51,7 @@ class CustomButton extends StatelessWidget {
             child: _buildButtonContent(),
           )
         : OutlinedButton(
-            onPressed: isEnabled && !isLoading ? onPressed : null,
+            onPressed: resolvedOnPressed,
             style: OutlinedButton.styleFrom(
               foregroundColor: const Color(0xFFFF5856),
               disabledForegroundColor: const Color(0xFFFF5856).withValues(alpha: 0.5),
@@ -65,10 +78,13 @@ class CustomButton extends StatelessWidget {
 
   Widget _buildButtonContent() {
     if (isLoading) {
-      return const SizedBox(
+      return SizedBox(
         height: 24,
         width: 24,
-        child: CircularProgressIndicator(strokeWidth: 2),
+        child: CircularProgressIndicator(
+          strokeWidth: 2,
+          color: isPrimary ? Colors.white : const Color(0xFFFF5856),
+        ),
       );
     }
 

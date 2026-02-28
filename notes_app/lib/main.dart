@@ -10,10 +10,9 @@ final authProvider = AuthProvider();
 final categoriesProvider = CategoriesProvider();
 
 void main() {
-  // Bloquear la orientación a solo Portrait
+  // Bloquear la orientación a solo Portrait (sin permitir rotación inversa)
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
   ]);
   runApp(const NotesApp());
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/index.dart';
+import '../services/index.dart';
 
 class CategoriesProvider extends ChangeNotifier {
   static final List<Category> _defaultCategories = [
@@ -65,12 +66,14 @@ class CategoriesProvider extends ChangeNotifier {
     ),
   ];
 
-  final List<Category> _defaultCategories$ = _defaultCategories;
+  final List<Category> _defaultCategories$ = List.unmodifiable(_defaultCategories);
   final List<Category> _customCategories = [];
   List<String> _selectedCategoryIds = [];
   String _newCategoryName = '';
   bool _showAddDialog = false;
   String? _error;
+  bool _isLoading = false;
+  bool _isSyncingCategories = false;
 
   // Getters
   List<Category> get defaultCategories => _defaultCategories$;
@@ -79,6 +82,8 @@ class CategoriesProvider extends ChangeNotifier {
   String get newCategoryName => _newCategoryName;
   bool get showAddDialog => _showAddDialog;
   String? get error => _error;
+  bool get isLoading => _isLoading;
+  bool get isSyncingCategories => _isSyncingCategories;
 
   List<Category> getAllCategories() =>
       [..._defaultCategories$, ..._customCategories];
@@ -116,26 +121,56 @@ class CategoriesProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void addCustomCategory() {
+  Future<void> addCustomCategory() async {
     if (_newCategoryName.trim().isEmpty) {
       _error = 'El nombre de la categoría no puede estar vacío';
       notifyListeners();
       return;
     }
 
-    final newCategory = Category(
-      id: 'custom_${DateTime.now().millisecondsSinceEpoch}',
-      name: _newCategoryName.trim(),
-      color: _generateRandomColor(),
-      isDefault: false,
-    );
-
-    _customCategories.add(newCategory);
-    _selectedCategoryIds.add(newCategory.id);
-    _newCategoryName = '';
-    _showAddDialog = false;
-    _error = null;
+    _isLoading = true;
     notifyListeners();
+
+    try {
+      // Intentar enviar al backend
+      await ApiService.createCategory(_newCategoryName.trim());
+
+      // Si es exitoso, agregar a la lista local
+      final newCategory = Category(
+        id: 'custom_${DateTime.now().millisecondsSinceEpoch}',
+        name: _newCategoryName.trim(),
+        color: _generateRandomColor(),
+        isDefault: false,
+      );
+
+      _customCategories.add(newCategory);
+      _selectedCategoryIds.add(newCategory.id);
+      _newCategoryName = '';
+      _showAddDialog = false;
+      _error = null;
+      _isLoading = false;
+      notifyListeners();
+    } on BadRequestException catch (e) {
+      _error = e.message;
+      _isLoading = false;
+      notifyListeners();
+    } on TimeoutException catch (e) {
+      _error = e.message;
+      _isLoading = false;
+      notifyListeners();
+    } on NetworkException catch (e) {
+      _error = e.message;
+      _isLoading = false;
+      notifyListeners();
+    } on ServerException catch (e) {
+      _error = e.message;
+      _isLoading = false;
+      notifyListeners();
+    } catch (e) {
+      _error = 'Error inesperado: ${e.toString()}';
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 
   void deleteCustomCategory(String categoryId) {
@@ -156,6 +191,70 @@ class CategoriesProvider extends ChangeNotifier {
 
   String _generateRandomColor() {
     return '#FFFF5856'; // Rojo coral Kelea - Color del botón
+  }
+
+
+  /// Sincroniza las categorías seleccionadas con el backend.
+  /// Envía los IDs/nombres de todas las categorías seleccionadas al servidor.
+  Future<bool> syncSelectedCategoriesToBackend() async {
+    _isSyncingCategories = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      final selectedCategories = getSelectedCategories();
+
+      if (selectedCategories.isEmpty) {
+        _error = 'Selecciona al menos una categoría';
+        _isSyncingCategories = false;
+        notifyListeners();
+        return false;
+      }
+
+      // Enviar cada categoría seleccionada al backend (default y personalizadas)
+      for (final category in selectedCategories) {
+        try {
+          await ApiService.createCategory(category.name);
+        } on BadRequestException catch (e) {
+          // Si la categoría ya existe en el servidor, continuamos con la siguiente
+          if (e.message.toLowerCase().contains('duplicada') ||
+              e.message.toLowerCase().contains('existe') ||
+              e.message.toLowerCase().contains('duplicate') ||
+              e.message.toLowerCase().contains('already')) {
+            continue;
+          }
+          _error = e.message;
+          _isSyncingCategories = false;
+          notifyListeners();
+          return false;
+        } on TimeoutException catch (e) {
+          _error = e.message;
+          _isSyncingCategories = false;
+          notifyListeners();
+          return false;
+        } on NetworkException catch (e) {
+          _error = e.message;
+          _isSyncingCategories = false;
+          notifyListeners();
+          return false;
+        } on ServerException catch (e) {
+          _error = e.message;
+          _isSyncingCategories = false;
+          notifyListeners();
+          return false;
+        }
+      }
+
+      _isSyncingCategories = false;
+      _error = null;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = 'Error inesperado: ${e.toString()}';
+      _isSyncingCategories = false;
+      notifyListeners();
+      return false;
+    }
   }
 }
 
