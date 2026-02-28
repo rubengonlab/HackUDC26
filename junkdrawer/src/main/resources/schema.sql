@@ -1,0 +1,27 @@
+DROP TABLE IF EXISTS Note;
+DROP TABLE IF EXISTS Capture;
+DROP TABLE IF EXISTS Category;
+
+CREATE TABLE Category (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL
+);
+
+CREATE TABLE Capture (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    createdAt TIMESTAMP NOT NULL,
+    captureType TINYINT NOT NULL,
+    categoryStatus TINYINT NOT NULL,
+    categoryId BIGINT,
+    FOREIGN KEY (categoryId) REFERENCES Category(id) ON DELETE SET NULL
+);
+
+CREATE TABLE Note (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    text VARCHAR(500) NOT NULL,
+    captureId BIGINT NOT NULL,
+    FOREIGN KEY (captureId) REFERENCES Capture(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_capture_category_id ON Capture(categoryId);
+CREATE INDEX idx_note_capture_id ON Note(captureId);
