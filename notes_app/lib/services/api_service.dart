@@ -106,6 +106,41 @@ class ApiService {
     }
   }
 
+  // Obtener audios paginados
+  static Future<Map<String, dynamic>> getAudios({int page = 0, int size = 100}) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/audio?page=$page&size=$size'),
+        headers: {'Content-Type': 'application/json'},
+      ).timeout(
+        const Duration(seconds: 30),
+        onTimeout: () => throw TimeoutException(
+          'La conexión tardó demasiado. Verifica tu conexión a internet.',
+        ),
+      );
+
+      if (response.statusCode == 200) {
+        final decoded = _safeDecodeBody(response);
+        if (decoded is Map<String, dynamic>) return decoded;
+        throw ServerException('Formato de respuesta inesperado del servidor.');
+      } else {
+        throw ServerException(
+          'Error al obtener audios (código ${response.statusCode}).',
+        );
+      }
+    } on TimeoutException {
+      rethrow;
+    } on ServerException {
+      rethrow;
+    } on http.ClientException catch (e) {
+      throw NetworkException(
+        'No se pudo conectar al servidor. Verifica tu red. (${e.message})',
+      );
+    } catch (e) {
+      throw NetworkException('Error inesperado de red: ${e.toString()}');
+    }
+  }
+
   // Obtener una categoría por ID
   static Future<Map<String, dynamic>> getCategoryById(int categoryId) async {
     try {

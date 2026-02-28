@@ -3,67 +3,36 @@ import '../models/index.dart';
 import '../services/index.dart';
 
 class CategoriesProvider extends ChangeNotifier {
+  // Paleta de colores para asignar a categorías del backend (sin color propio)
+  static const List<String> _palette = [
+    '#FFFF5856', // rojo coral Kelea
+    '#FF4C9FE0', // azul cielo
+    '#FF56C288', // verde menta
+    '#FFFFC107', // ámbar
+    '#FFE040FB', // morado
+    '#FFFF7043', // naranja
+    '#FF26C6DA', // cian
+    '#FFEF5350', // rojo vivo
+    '#FF66BB6A', // verde hoja
+    '#FFAB47BC', // lila
+  ];
+
+  // ── Categorías cargadas desde el backend ─────────────────────────────────
+  final List<Category> _backendCategories = [];
+  bool _isLoadingCategories = false;
+
+  // ── Categorías por defecto (pantalla de selección inicial) ───────────────
   static final List<Category> _defaultCategories = [
-    Category(
-      id: 'work',
-      name: '💼 Trabajo',
-      color: '#FFFF5856',
-      isDefault: true,
-    ),
-    Category(
-      id: 'hobbies',
-      name: '🎮 Pasatiempos',
-      color: '#FFFF5856',
-      isDefault: true,
-    ),
-    Category(
-      id: 'learning',
-      name: '📚 Aprendizaje',
-      color: '#FFFF5856',
-      isDefault: true,
-    ),
-    Category(
-      id: 'projects',
-      name: '🚀 Proyectos',
-      color: '#FFFF5856',
-      isDefault: true,
-    ),
-    Category(
-      id: 'health',
-      name: '💪 Salud & Bienestar',
-      color: '#FFFF5856',
-      isDefault: true,
-    ),
-    Category(
-      id: 'family',
-      name: '👨‍ Familia',
-      color: '#FFFF5856',
-      isDefault: true,
-    ),
-    Category(
-      id: 'shopping',
-      name: '🛍️ Compras & Regalos',
-      color: '#FFFF5856',
-      isDefault: true,
-    ),
-    Category(
-      id: 'food',
-      name: '🍽️ Comida',
-      color: '#FFFF5856',
-      isDefault: true,
-    ),
-    Category(
-      id: 'finances',
-      name: '💰 Finanzas',
-      color: '#FFFF5856',
-      isDefault: true,
-    ),
-    Category(
-      id: 'trips',
-      name: '✈️ Viajes',
-      color: '#FFFF5856',
-      isDefault: true,
-    ),
+    Category(id: 'work',      name: '💼 Trabajo',         color: '#FFFF5856', isDefault: true),
+    Category(id: 'hobbies',   name: '🎮 Pasatiempos',      color: '#FF4C9FE0', isDefault: true),
+    Category(id: 'learning',  name: '📚 Aprendizaje',      color: '#FF56C288', isDefault: true),
+    Category(id: 'projects',  name: '🚀 Proyectos',        color: '#FFFFC107', isDefault: true),
+    Category(id: 'health',    name: '💪 Salud & Bienestar', color: '#FFE040FB', isDefault: true),
+    Category(id: 'family',    name: '👨‍👩‍👧‍👦 Familia',         color: '#FFFF7043', isDefault: true),
+    Category(id: 'shopping',  name: '🛍️ Compras & Regalos', color: '#FF26C6DA', isDefault: true),
+    Category(id: 'food',      name: '🍽️ Comida',            color: '#FFEF5350', isDefault: true),
+    Category(id: 'finances',  name: '💰 Finanzas',          color: '#FF66BB6A', isDefault: true),
+    Category(id: 'trips',     name: '✈️ Viajes',            color: '#FFAB47BC', isDefault: true),
   ];
 
   final List<Category> _defaultCategories$ = List.unmodifiable(_defaultCategories);
@@ -75,7 +44,7 @@ class CategoriesProvider extends ChangeNotifier {
   bool _isLoading = false;
   bool _isSyncingCategories = false;
 
-  // Getters
+  // ── Getters ─────────────────────────────────────────────────────────────────
   List<Category> get defaultCategories => _defaultCategories$;
   List<Category> get customCategories => _customCategories;
   List<String> get selectedCategoryIds => _selectedCategoryIds;
@@ -84,13 +53,43 @@ class CategoriesProvider extends ChangeNotifier {
   String? get error => _error;
   bool get isLoading => _isLoading;
   bool get isSyncingCategories => _isSyncingCategories;
+  bool get isLoadingCategories => _isLoadingCategories;
 
-  List<Category> getAllCategories() =>
-      [..._defaultCategories$, ..._customCategories];
+  /// Devuelve las categorías reales del backend si ya se cargaron;
+  /// si no, devuelve las locales (default + custom) como fallback.
+  List<Category> getAllCategories() {
+    if (_backendCategories.isNotEmpty) return List.unmodifiable(_backendCategories);
+    return [..._defaultCategories$, ..._customCategories];
+  }
 
   List<Category> getSelectedCategories() => getAllCategories()
       .where((cat) => _selectedCategoryIds.contains(cat.id))
       .toList();
+
+  // ── Carga de categorías desde el backend ─────────────────────────────────
+  /// Llama a GET /categories y reemplaza la lista local con la del servidor.
+  Future<void> loadFromBackend() async {
+    if (_isLoadingCategories) return;
+    _isLoadingCategories = true;
+    notifyListeners();
+
+    try {
+      final raw = await ApiService.getCategories();
+      _backendCategories.clear();
+      for (int i = 0; i < raw.length; i++) {
+        final item = raw[i];
+        final id = item['id']?.toString() ?? 'cat_$i';
+        final name = item['name'] as String? ?? 'Categoría';
+        final color = _palette[i % _palette.length];
+        _backendCategories.add(Category(id: id, name: name, color: color));
+      }
+    } catch (_) {
+      // Si falla, seguimos con las locales silenciosamente
+    } finally {
+      _isLoadingCategories = false;
+      notifyListeners();
+    }
+  }
 
   void toggleCategorySelection(String categoryId) {
     if (_selectedCategoryIds.contains(categoryId)) {

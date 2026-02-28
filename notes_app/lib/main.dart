@@ -8,6 +8,7 @@ import 'providers/index.dart';
 // Instancias globales de los providers
 final authProvider = AuthProvider();
 final categoriesProvider = CategoriesProvider();
+final notesProvider = NotesProvider();
 
 void main() {
   // Bloquear la orientación a solo Portrait (sin permitir rotación inversa)
@@ -26,6 +27,7 @@ class NotesApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider.value(value: authProvider),
         ChangeNotifierProvider.value(value: categoriesProvider),
+        ChangeNotifierProvider.value(value: notesProvider),
       ],
       child: MaterialApp.router(
         title: 'Reciclador de Ideas',
