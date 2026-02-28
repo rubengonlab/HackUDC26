@@ -16,6 +16,7 @@ CREATE TABLE Capture (
     createdAt TIMESTAMP NOT NULL,
     captureType VARCHAR(30) NOT NULL,
     categoryStatus VARCHAR(30) NOT NULL DEFAULT 'UNCATEGORIZED',
+    title VARCHAR(200),
     contextText VARCHAR(500),
     origin VARCHAR(30),
     categoryId BIGINT,
@@ -24,7 +25,6 @@ CREATE TABLE Capture (
 
 CREATE TABLE Note (
     id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    title VARCHAR(200),
     content VARCHAR(500) NOT NULL,
     captureId BIGINT NOT NULL UNIQUE,
     FOREIGN KEY (captureId) REFERENCES Capture(id) ON DELETE CASCADE

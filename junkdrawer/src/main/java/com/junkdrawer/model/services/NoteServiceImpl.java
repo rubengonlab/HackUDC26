@@ -7,6 +7,8 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,23 +43,16 @@ public class NoteServiceImpl implements NoteService {
     private BedrockNovaService bedrockNovaService;
 
     @Override
-    public Note createNoteResource(String title, String content, Long categoryId, String contextText)
+    public Note createNoteResource(String content, String contextText)
             throws InstanceNotFoundException {
-        Category category = null;
-        if (categoryId != null) {
-            category = permissionChecker.checkCategoryExists(categoryId);
-        }
-
         Capture capture = new Capture();
         capture.setCaptureType(Capture.CaptureType.NOTE);
         capture.setCategoryStatus(Capture.CategoryStatus.PENDING);
-        capture.setCategory(category);
         capture.setContextText(contextText);
         capture = captureDao.save(capture);
 
         Note note = new Note();
         note.setCapture(capture);
-        note.setTitle(title);
         note.setText(content);
 
         note = noteDao.save(note);
@@ -79,7 +74,12 @@ public class NoteServiceImpl implements NoteService {
                 .collect(Collectors.toList());
 
         try {
-            String predictedCategory = bedrockNovaService.clasificarTexto(categoryNames, noteText);
+            BedrockNovaService.AiProcessingResult aiResult = bedrockNovaService.procesarTexto(categoryNames, noteText);
+            if (aiResult.title() != null && !aiResult.title().isBlank()) {
+                capture.setTitle(aiResult.title().trim());
+            }
+
+            String predictedCategory = aiResult.category();
             if (predictedCategory == null || predictedCategory.isBlank()) {
                 capture.setCategoryStatus(Capture.CategoryStatus.UNCATEGORIZED);
                 captureDao.save(capture);
@@ -143,5 +143,12 @@ public class NoteServiceImpl implements NoteService {
     public void deleteNote(Long id) throws InstanceNotFoundException {
         Note note = permissionChecker.checkNoteExists(id);
         noteDao.delete(note);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Block<Note> getAll(int page, int size) {
+        Slice<Note> slice = noteDao.findAll(PageRequest.of(page, size));
+        return new Block<>(slice.getContent(), slice.hasNext());
     }
 }

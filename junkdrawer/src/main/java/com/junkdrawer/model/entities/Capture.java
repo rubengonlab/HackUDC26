@@ -36,6 +36,7 @@ public class Capture {
     private CaptureType captureType;
     private CategoryStatus categoryStatus = CategoryStatus.UNCATEGORIZED;
     private Category category;
+    private String title;
     private String contextText;
     private String origin;
     private Note note;
@@ -104,6 +105,14 @@ public class Capture {
 
     public void setCategory(Category category) {
         this.category = category;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
     }
 
     public String getContextText() {

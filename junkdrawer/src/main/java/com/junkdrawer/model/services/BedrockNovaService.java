@@ -17,10 +17,14 @@ import software.amazon.awssdk.services.bedrockruntime.model.Message;
 @Service
 public class BedrockNovaService {
 
+    public record AiProcessingResult(String category, String title) {
+    }
+
     private final BedrockRuntimeClient bedrockClient;
     private final ObjectMapper objectMapper;
     private static final String MODEL_ID = "amazon.nova-lite-v1:0";
     private static final String RESPONSE_FIELD = "response";
+    private static final String TITLE_FIELD = "title";
 
     public BedrockNovaService() {
         this.bedrockClient = BedrockRuntimeClient.builder()
@@ -31,6 +35,10 @@ public class BedrockNovaService {
     }
 
     public String clasificarTexto(List<String> categories, String text) {
+        return procesarTexto(categories, text).category();
+    }
+
+    public AiProcessingResult procesarTexto(List<String> categories, String text) {
         String prompt = buildPrompt(categories, text);
 
         Message message = Message.builder()
@@ -46,7 +54,7 @@ public class BedrockNovaService {
         try {
             ConverseResponse response = bedrockClient.converse(request);
             String rawResponse = response.output().message().content().get(0).text();
-            return extractResponseValue(rawResponse);
+            return extractResponse(rawResponse);
         } catch (Exception e) {
             System.err.println("Error al invocar Bedrock: " + e.getMessage());
             throw new RuntimeException("Fallo en la comunicación con AWS Bedrock", e);
@@ -75,10 +83,11 @@ public class BedrockNovaService {
                 2. Selecciona EXACTAMENTE UNA categoria de la lista. No inventes categorias nuevas.
                 3. Tu respuesta debe ser UNICAMENTE un objeto JSON valido.
                 4. No incluyas saludos, explicaciones ni bloques markdown. Solo devuelve JSON puro.
-                5. En caso de que el texto no encaje con ninguna categoría, devuelve {"response":"sin_categoria"}
+                5. En caso de que el texto no encaje con ninguna categoría, devuelve {"response":"sin_categoria","title":"..."}.
+                6. Incluye siempre un "title" corto (maximo 7 palabras) que resuma el texto.
 
                 Formato de salida esperado:
-                {"response":"nombre_de_la_categoria_elegida"}
+                {"response":"nombre_de_la_categoria_elegida","title":"titulo_resumido"}
                 """.formatted(categoriesJson, text);
     }
 
@@ -91,7 +100,7 @@ public class BedrockNovaService {
                 .replace("\t", "\\t") + "\"";
     }
 
-    private String extractResponseValue(String rawResponse) {
+    private AiProcessingResult extractResponse(String rawResponse) {
         if (rawResponse == null || rawResponse.isBlank()) {
             throw new IllegalStateException("La respuesta del modelo llegó vacía");
         }
@@ -107,7 +116,17 @@ public class BedrockNovaService {
         if (response.isEmpty()) {
             throw new IllegalStateException("El campo 'response' está vacío");
         }
-        return response;
+
+        JsonNode titleNode = root.get(TITLE_FIELD);
+        String title = null;
+        if (titleNode != null && !titleNode.isNull()) {
+            String parsedTitle = titleNode.asText().trim();
+            if (!parsedTitle.isEmpty()) {
+                title = parsedTitle;
+            }
+        }
+
+        return new AiProcessingResult(response, title);
     }
 
     private JsonNode parseJsonNode(String rawResponse) {

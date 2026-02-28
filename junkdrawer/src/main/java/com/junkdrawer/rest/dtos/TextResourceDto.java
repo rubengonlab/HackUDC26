@@ -22,13 +22,13 @@ public class TextResourceDto {
     @Schema(description = "Estado de categoria de la captura", example = "UNCATEGORIZED")
     private String categoryStatus;
 
-    @Schema(description = "Id de categoria si existe", example = "2")
+    @Schema(description = "Id de categoria si existe", example = "2", accessMode = Schema.AccessMode.READ_ONLY)
     private Long categoryId;
 
     @Schema(description = "Contexto adicional", example = "Ideas para backlog")
     private String contextText;
 
-    @Schema(description = "Titulo para NOTE", example = "Idea")
+    @Schema(description = "Titulo resumido generado para la captura", example = "Ideas para sprint", accessMode = Schema.AccessMode.READ_ONLY)
     private String title;
 
     @Schema(description = "Contenido para NOTE", example = "Mejorar onboarding")

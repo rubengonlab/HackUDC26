@@ -2,9 +2,13 @@ package com.junkdrawer.model.services;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -12,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.junkdrawer.model.common.DuplicateInstanceException;
 import com.junkdrawer.model.common.InstanceNotFoundException;
 import com.junkdrawer.model.daos.CaptureDao;
+import com.junkdrawer.model.daos.CategoryDao;
 import com.junkdrawer.model.daos.LinkDao;
 import com.junkdrawer.model.entities.Capture;
 import com.junkdrawer.model.entities.Category;
@@ -21,6 +26,9 @@ import com.junkdrawer.model.entities.Link;
 @Transactional
 public class LinkServiceImpl implements LinkService {
 
+    private static final Logger logger = LoggerFactory.getLogger(LinkServiceImpl.class);
+    private static final String NO_CATEGORY = "sin_categoria";
+
     @Autowired
     private LinkDao linkDao;
 
@@ -28,10 +36,13 @@ public class LinkServiceImpl implements LinkService {
     private CaptureDao captureDao;
 
     @Autowired
-    private PermissionChecker permissionChecker;
+    private CategoryDao categoryDao;
+
+    @Autowired
+    private BedrockNovaService bedrockNovaService;
 
     @Override
-    public Link createLinkResource(String url, Long categoryId, String contextText)
+    public Link createLinkResource(String url, String contextText)
             throws DuplicateInstanceException, InstanceNotFoundException {
 
         Optional<Link> optionalLink = linkDao.findByUrl(url);
@@ -39,17 +50,11 @@ public class LinkServiceImpl implements LinkService {
             throw new DuplicateInstanceException("project.entities.link", url);
         }
 
-        Category category = null;
-        if (categoryId != null) {
-            category = permissionChecker.checkCategoryExists(categoryId);
-        }
-
         String origin = detectOrigin(url);
 
         Capture capture = new Capture();
         capture.setCaptureType(Capture.CaptureType.LINK);
-        capture.setCategoryStatus(Capture.CategoryStatus.UNCATEGORIZED);
-        capture.setCategory(category);
+        capture.setCategoryStatus(Capture.CategoryStatus.PENDING);
         capture.setContextText(contextText);
         capture.setOrigin(origin);
         capture = captureDao.save(capture);
@@ -59,7 +64,10 @@ public class LinkServiceImpl implements LinkService {
         link.setUrl(url);
         link.setOrigin(origin);
 
-        return linkDao.save(link);
+        link = linkDao.save(link);
+
+        applySuggestedCategoryAndTitle(capture, buildTextForClassification(url, contextText));
+        return link;
     }
 
     private String detectOrigin(String url) {
@@ -89,6 +97,58 @@ public class LinkServiceImpl implements LinkService {
             return normalizedHost;
         } catch (URISyntaxException exception) {
             return "unknown";
+        }
+    }
+
+    private String buildTextForClassification(String url, String contextText) {
+        if (contextText != null && !contextText.isBlank()) {
+            return contextText.trim();
+        }
+        return "URL: " + url;
+    }
+
+    private void applySuggestedCategoryAndTitle(Capture capture, String textToClassify) {
+        List<Category> allCategories = categoryDao.findAllByOrderByNameAsc();
+        if (allCategories.isEmpty() || textToClassify.isBlank()) {
+            capture.setCategoryStatus(Capture.CategoryStatus.UNCATEGORIZED);
+            captureDao.save(capture);
+            return;
+        }
+
+        List<String> categoryNames = allCategories.stream()
+                .map(Category::getName)
+                .collect(Collectors.toList());
+
+        try {
+            BedrockNovaService.AiProcessingResult aiResult = bedrockNovaService.procesarTexto(categoryNames, textToClassify);
+            if (aiResult.title() != null && !aiResult.title().isBlank()) {
+                capture.setTitle(aiResult.title().trim());
+            }
+
+            String predictedCategory = aiResult.category();
+            if (predictedCategory == null || predictedCategory.isBlank()
+                    || NO_CATEGORY.equalsIgnoreCase(predictedCategory.trim())) {
+                capture.setCategoryStatus(Capture.CategoryStatus.UNCATEGORIZED);
+                captureDao.save(capture);
+                return;
+            }
+
+            Optional<Category> matchedCategory = allCategories.stream()
+                    .filter(category -> category.getName().equalsIgnoreCase(predictedCategory.trim()))
+                    .findFirst();
+
+            if (matchedCategory.isPresent()) {
+                capture.setCategory(matchedCategory.get());
+                captureDao.save(capture);
+            } else {
+                capture.setCategoryStatus(Capture.CategoryStatus.UNCATEGORIZED);
+                captureDao.save(capture);
+                logger.warn("Categoría sugerida por modelo no encontrada para link: {}", predictedCategory);
+            }
+        } catch (Exception exception) {
+            capture.setCategoryStatus(Capture.CategoryStatus.UNCATEGORIZED);
+            captureDao.save(capture);
+            logger.warn("No se pudo clasificar automáticamente el link: {}", exception.getMessage());
         }
     }
 }

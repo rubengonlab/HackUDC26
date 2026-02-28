@@ -12,14 +12,12 @@ import jakarta.persistence.Transient;
 @Entity
 public class Note {
     private Long id;
-    private String title;
     private String content;
     private Capture capture;
 
     public Note() {}
 
-    public Note(String title, String content, Capture capture) {
-        this.title = title;
+    public Note(String content, Capture capture) {
         this.content = content;
         this.capture = capture;
     }
@@ -31,13 +29,6 @@ public class Note {
     }
     public void setId(Long id) {
         this.id = id;
-    }
-
-    public String getTitle() {
-        return title;
-    }
-    public void setTitle(String title) {
-        this.title = title;
     }
 
     public String getContent() {

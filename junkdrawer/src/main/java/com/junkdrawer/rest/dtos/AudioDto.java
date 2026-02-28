@@ -1,5 +1,7 @@
 package com.junkdrawer.rest.dtos;
 
+import java.time.LocalDateTime;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 
 @Schema(name = "Audio", description = "Recurso de audio asociado a una captura.")
@@ -26,11 +28,30 @@ public class AudioDto {
     @Schema(description = "Ruta de almacenamiento en servidor", example = "uploads/audio/8ec1e247-44c2-4122-a631-1efd8cce1b25.mp3")
     private String storagePath;
 
+    @Schema(description = "URL publica para reproducir/descargar el audio", example = "http://localhost:8080/audio/1/content")
+    private String contentUrl;
+
+    @Schema(description = "Fecha de creacion de la captura", example = "2026-02-28T13:00:00")
+    private LocalDateTime createdAt;
+
+    @Schema(description = "Estado de categoria de la captura", example = "PENDING")
+    private String categoryStatus;
+
+    @Schema(description = "Id de categoria si existe", example = "2", accessMode = Schema.AccessMode.READ_ONLY)
+    private Long categoryId;
+
+    @Schema(description = "Titulo resumido generado para la captura", example = "Resumen de reunion", accessMode = Schema.AccessMode.READ_ONLY)
+    private String title;
+
+    @Schema(description = "Contexto/transcripcion asociada", example = "Notas de voz sobre roadmap")
+    private String contextText;
+
     public AudioDto() {
     }
 
     public AudioDto(Long id, Long captureId, String fileName, String originalFileName, String mimeType, Long size,
-            String storagePath) {
+            String storagePath, String contentUrl, LocalDateTime createdAt, String categoryStatus, Long categoryId,
+            String title, String contextText) {
         this.id = id;
         this.captureId = captureId;
         this.fileName = fileName;
@@ -38,6 +59,12 @@ public class AudioDto {
         this.mimeType = mimeType;
         this.size = size;
         this.storagePath = storagePath;
+        this.contentUrl = contentUrl;
+        this.createdAt = createdAt;
+        this.categoryStatus = categoryStatus;
+        this.categoryId = categoryId;
+        this.title = title;
+        this.contextText = contextText;
     }
 
     public Long getId() {
@@ -94,5 +121,53 @@ public class AudioDto {
 
     public void setStoragePath(String storagePath) {
         this.storagePath = storagePath;
+    }
+
+    public String getContentUrl() {
+        return contentUrl;
+    }
+
+    public void setContentUrl(String contentUrl) {
+        this.contentUrl = contentUrl;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public String getCategoryStatus() {
+        return categoryStatus;
+    }
+
+    public void setCategoryStatus(String categoryStatus) {
+        this.categoryStatus = categoryStatus;
+    }
+
+    public Long getCategoryId() {
+        return categoryId;
+    }
+
+    public void setCategoryId(Long categoryId) {
+        this.categoryId = categoryId;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public String getContextText() {
+        return contextText;
+    }
+
+    public void setContextText(String contextText) {
+        this.contextText = contextText;
     }
 }

@@ -25,6 +25,7 @@ import com.junkdrawer.rest.dtos.TextResourceDto;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -50,12 +51,23 @@ public class TextController {
     @Autowired
     private TextResourceConversor textResourceConversor;
 
-    @Operation(summary = "Crear recurso de texto", description = "Si content es URL valida crea LINK, si no crea NOTE.")
+    @Operation(
+            summary = "Crear recurso de texto",
+            description = "Si content es URL valida crea LINK, si no crea NOTE.",
+            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    required = true,
+                    content = @Content(
+                            schema = @Schema(implementation = CreateTextResourceParamsDto.class),
+                            examples = @ExampleObject(value = """
+                                    {
+                                      "content": "Comprar leche y pan",
+                                      "contextText": "Lista de compra"
+                                    }
+                                    """))))
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Recurso creado",
                     content = @Content(schema = @Schema(implementation = TextResourceDto.class))),
-            @ApiResponse(responseCode = "400", description = "Datos invalidos o URL duplicada"),
-            @ApiResponse(responseCode = "404", description = "Categoria no encontrada")
+            @ApiResponse(responseCode = "400", description = "Datos invalidos o URL duplicada")
     })
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
@@ -63,14 +75,12 @@ public class TextController {
             throws DuplicateInstanceException, InstanceNotFoundException {
 
         if (isValidUrl(params.getContent())) {
-            Link link = linkService.createLinkResource(params.getContent(), params.getCategoryId(), params.getContextText());
+            Link link = linkService.createLinkResource(params.getContent(), params.getContextText());
             return textResourceConversor.toTextResourceDto(link);
         }
 
         Note note = noteService.createNoteResource(
-                params.getTitle(),
                 params.getContent(),
-                params.getCategoryId(),
                 params.getContextText());
         return textResourceConversor.toTextResourceDto(note);
     }

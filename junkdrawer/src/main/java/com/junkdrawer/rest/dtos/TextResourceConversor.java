@@ -22,7 +22,6 @@ public class TextResourceConversor {
         TextResourceDto dto = baseFromCapture(capture);
         dto.setKind("NOTE");
         dto.setId(note.getId());
-        dto.setTitle(note.getTitle());
         dto.setContent(note.getContent());
         return dto;
     }
@@ -43,6 +42,7 @@ public class TextResourceConversor {
         dto.setCreatedAt(capture.getCreatedAt());
         dto.setCategoryStatus(capture.getCategoryStatus().name());
         dto.setContextText(capture.getContextText());
+        dto.setTitle(capture.getTitle());
         dto.setCategoryId(capture.getCategory() != null ? capture.getCategory().getId() : null);
         return dto;
     }

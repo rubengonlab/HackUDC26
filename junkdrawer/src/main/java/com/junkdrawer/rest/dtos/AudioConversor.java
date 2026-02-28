@@ -5,24 +5,32 @@ import java.util.List;
 import org.springframework.stereotype.Component;
 
 import com.junkdrawer.model.entities.Audio;
+import com.junkdrawer.model.entities.Capture;
 
 @Component
 public class AudioConversor {
 
-    public AudioDto toAudioDto(Audio audio) {
+    public AudioDto toAudioDto(Audio audio, String contentUrl) {
+        Capture capture = audio.getCapture();
         return new AudioDto(
                 audio.getId(),
-                audio.getCapture().getId(),
+                capture.getId(),
                 audio.getFileName(),
                 audio.getOriginalFileName(),
                 audio.getMimeType(),
                 audio.getSize(),
-                audio.getStoragePath());
+                audio.getStoragePath(),
+                contentUrl,
+                capture.getCreatedAt(),
+                capture.getCategoryStatus().name(),
+                capture.getCategory() != null ? capture.getCategory().getId() : null,
+                capture.getTitle(),
+                capture.getContextText());
     }
 
-    public List<AudioDto> toAudioDtos(List<Audio> audios) {
+    public List<AudioDto> toAudioDtos(List<Audio> audios, java.util.function.Function<Audio, String> contentUrlBuilder) {
         return audios.stream()
-                .map(this::toAudioDto)
+                .map(audio -> toAudioDto(audio, contentUrlBuilder.apply(audio)))
                 .toList();
     }
 }

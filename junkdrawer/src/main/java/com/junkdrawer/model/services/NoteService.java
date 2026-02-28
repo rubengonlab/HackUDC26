@@ -5,7 +5,7 @@ import com.junkdrawer.model.entities.Note;
 
 public interface NoteService {
 
-    Note createNoteResource(String title, String content, Long categoryId, String contextText)
+    Note createNoteResource(String content, String contextText)
             throws InstanceNotFoundException;
 
     Note createNote(String text, Long captureId) throws InstanceNotFoundException;
@@ -15,4 +15,6 @@ public interface NoteService {
     Note updateNote(Long id, String text, Long captureId) throws InstanceNotFoundException;
 
     void deleteNote(Long id) throws InstanceNotFoundException;
+
+    Block<Note> getAll(int page, int size);
 }
