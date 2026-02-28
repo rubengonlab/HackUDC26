@@ -1,4 +1,4 @@
-name: notes_app
+name: kelea_notes
 description: "Aplicación de gestión de notas con clasificación por categorías"
 publish_to: 'none'
 
@@ -25,12 +25,13 @@ dev_dependencies:
 flutter_launcher_icons:
   android: "ic_launcher"
   ios: false
-  image_path: "assets/images/Designer.png"
+  image_path: "assets/images/AppIcon.jpeg"
   adaptive_icon_background: "#1A1F4D"
-  adaptive_icon_foreground: "assets/images/Designer.png"
+  adaptive_icon_foreground: "assets/images/AppIcon.jpeg"
 
 flutter:
   uses-material-design: true
   assets:
-    - assets/images/Designer.png
+    - assets/images/LoginIcon.png
+    - assets/images/AppIcon.jpeg
 

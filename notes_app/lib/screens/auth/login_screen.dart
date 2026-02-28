@@ -43,31 +43,31 @@ class _LoginScreenState extends State<LoginScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     // Espaciador superior
-                    const SizedBox(height: 40),
+                    const SizedBox(height: 20),
 
-                    // Logo de Kelea
+                    // Logo de Kelea - Ampliado
                     Center(
                       child: Image.asset(
-                        'assets/images/Designer.png',
-                        width: 120,
-                        height: 120,
-                        fit: BoxFit.contain,
+                        'assets/images/LoginIcon.png',
+                        width: 220,
+                        height: 147,
+                        fit: BoxFit.cover,
                       ),
                     ),
 
-                    const SizedBox(height: 40),
+                    const SizedBox(height: 60),
 
-                    // Título
+                    // Título de bienvenida
                     Text(
-                      'Kelea Notes',
+                      '¡Bienvenido!',
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
+                            fontWeight: FontWeight.w800,
                             color: Colors.white,
                           ),
                     ),
 
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 16),
 
                     // Subtítulo
                     Text(

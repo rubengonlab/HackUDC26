@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'config/theme/index.dart';
 import 'config/routes/index.dart';
@@ -9,6 +10,11 @@ final authProvider = AuthProvider();
 final categoriesProvider = CategoriesProvider();
 
 void main() {
+  // Bloquear la orientación a solo Portrait
+  SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
   runApp(const NotesApp());
 }
 
