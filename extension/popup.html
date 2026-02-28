@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    /* COLORES OFICIALES KELEA (Desde Flutter) */
+    :root {
+      --primary: #1A1F4D;       /* Azul oscuro Kelea */
+      --accent: #FF5856;        /* Rojo coral Kelea */
+      --bg-color: #F8F9FB;      /* Blanco muy suave */
+      --surface: #FFFFFF;       /* Blanco puro */
+      --border: #E8EDF2;        /* Gris muy claro */
+      --text-main: #1A1F4D;     /* Texto en azul oscuro */
+      --text-sec: #6B7280;      /* Gris medio */
+      --success: #10B981;       /* Verde suave para aciertos */
+      --transition: all 0.2s ease-in-out;
+    }
+
+    body {
+      width: 320px;
+      padding: 0;
+      font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      margin: 0;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      overflow: hidden;
+    }
+
+    .screen { display: none; padding: 24px; animation: fadeIn 0.3s ease; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* CABECERA MINIMALISTA */
+    .header {
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 24px; gap: 10px;
+    }
+    .logo-icon { width: 20px; height: 20px; background-color: var(--accent); border-radius: 6px; }
+    h3 { margin: 0; font-weight: 600; font-size: 18px; letter-spacing: 0.25px; color: var(--text-main); }
+
+    /* INPUTS ELEGANTES */
+    input, textarea {
+      width: 100%; margin-bottom: 16px; padding: 14px 16px; box-sizing: border-box;
+      background-color: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+      color: var(--text-main); font-family: inherit; font-size: 14px; transition: var(--transition);
+    }
+    input:focus, textarea:focus { outline: none; border-color: var(--accent); border-width: 2px; padding: 13px 15px; }
+    textarea { height: 110px; resize: none; line-height: 1.5; }
+    input::placeholder, textarea::placeholder { color: var(--text-sec); opacity: 0.6; }
+
+    /* BOTONES */
+    button {
+      width: 100%; padding: 14px 32px; border: none; cursor: pointer; border-radius: 8px;
+      font-weight: 600; font-size: 15px; letter-spacing: 0.5px; transition: var(--transition);
+    }
+    button:active { transform: scale(0.98); }
+
+    /* Variantes de Botones como en Flutter */
+    .btn-primary { background-color: var(--primary); color: white; }
+    .btn-primary:hover { opacity: 0.9; }
+    
+    .btn-outlined { background-color: var(--surface); color: var(--primary); border: 1px solid var(--border); }
+    .btn-outlined:hover { border-color: var(--primary); }
+
+    .btn-accent { background-color: var(--accent); color: white; }
+    .btn-accent:hover { opacity: 0.9; }
+
+    .btn-salir { background-color: transparent; color: var(--text-sec); font-size: 13px; padding: 8px; margin-top: 8px; }
+    .btn-salir:hover { color: var(--accent); }
+
+    /* ESTADO */
+    #estado { font-size: 13px; text-align: center; margin-top: 12px; min-height: 1.2em; font-weight: 500; }
+    
+    @keyframes pulse-light {
+      0% { box-shadow: 0 0 0 0 rgba(255, 88, 86, 0.4); }
+      70% { box-shadow: 0 0 0 10px rgba(255, 88, 86, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(255, 88, 86, 0); }
+    }
+  </style>
+</head>
+<body>
+  <div id="pantallaLogin" class="screen">
+    <div class="header">
+      <div class="logo-icon"></div>
+      <h3>Login</h3>
+    </div>
+    <input type="text" id="fakeUser" placeholder="ID de Usuario">
+    <input type="password" id="fakePass" placeholder="Contraseña">
+    <button id="btnEntrar" class="btn-primary">INICIAR SESIÓN</button>
+  </div>
+
+  <div id="pantallaApp" class="screen">
+    <div class="header" style="justify-content: flex-start;">
+      <div class="logo-icon" style="width: 14px; height: 14px;"></div>
+      <h3 style="font-size: 15px;">¡Añade una nueva nota!</h3>
+    </div>
+    
+    <textarea id="textoNota" placeholder="Escribe una nota o captura texto..."></textarea>
+    <button id="btnGuardar" class="btn-primary" style="margin-bottom: 12px;">GUARDAR NOTA</button>
+
+    <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+      <button id="btnGrabar" class="btn-outlined" style="flex: 1;">AUDIO</button>
+      <button id="btnCancelar" class="btn-outlined" style="flex: 1; display: none;">CANCELAR</button>
+      <button id="btnDetener" class="btn-accent" style="flex: 1; display: none; animation: pulse-light 1.5s infinite;">ENVIAR</button>
+    </div>
+
+    <div id="estado"></div>
+    <button id="btnSalir" class="btn-salir">Cerrar sesión</button>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

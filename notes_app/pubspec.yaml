@@ -1,0 +1,36 @@
+name: notes_app
+description: "Aplicación de gestión de notas con clasificación por categorías"
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.10.8
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  provider: ^6.1.0
+  go_router: ^13.0.0
+  shared_preferences: ^2.2.2
+  flutter_launcher_icons: ^0.14.4
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^6.0.0
+
+flutter_launcher_icons:
+  android: "ic_launcher"
+  ios: false
+  image_path: "assets/images/Designer.png"
+  adaptive_icon_background: "#1A1F4D"
+  adaptive_icon_foreground: "assets/images/Designer.png"
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/Designer.png
+
