@@ -1,11 +1,18 @@
 {
   "manifest_version": 3,
-  "name": "JunkDrawer: Capturador",
-  "version": "0.0",
-  "description": "Captura textos y notas para mi Segundo Cerebro",
-  "permissions": ["contextMenus", "activeTab"],
+  "name": "Kelea JunkDrawer",
+  "version": "1.0",
+  "description": "Captura de notas y audios para el Segundo Cerebro",
+  "permissions": ["contextMenus", "activeTab", "storage"],
   "action": {
-    "default_popup": "popup.html"
+    "default_popup": "popup.html",
+    "default_icon": "icon.png" 
+  },
+  "icons": {
+    "16": "icon.png",
+    "32": "icon.png",
+    "48": "icon.png",
+    "128": "icon.png"
   },
   "background": {
     "service_worker": "background.js"
