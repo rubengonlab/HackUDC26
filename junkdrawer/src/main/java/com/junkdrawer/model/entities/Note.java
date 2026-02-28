@@ -6,18 +6,21 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToOne;
+import jakarta.persistence.Transient;
 
 @Entity
 public class Note {
     private Long id;
-    private String text;
+    private String title;
+    private String content;
     private Capture capture;
 
     public Note() {}
 
-    public Note(String text, Capture capture) {
-        this.text = text;
+    public Note(String title, String content, Capture capture) {
+        this.title = title;
+        this.content = content;
         this.capture = capture;
     }
 
@@ -30,15 +33,31 @@ public class Note {
         this.id = id;
     }
 
-    public String getText() {
-        return text;
+    public String getTitle() {
+        return title;
     }
-    public void setText(String text) {
-        this.text = text;
+    public void setTitle(String title) {
+        this.title = title;
     }
 
-    @ManyToOne(optional=false, fetch=FetchType.LAZY)
-    @JoinColumn(name="captureId")
+    public String getContent() {
+        return content;
+    }
+    public void setContent(String content) {
+        this.content = content;
+    }
+
+    // Temporary compatibility with current service layer.
+    @Transient
+    public String getText() {
+        return content;
+    }
+    public void setText(String text) {
+        this.content = text;
+    }
+
+    @OneToOne(optional=false, fetch=FetchType.LAZY)
+    @JoinColumn(name="captureId", unique=true)
     public Capture getCapture() {
         return capture;
     }
