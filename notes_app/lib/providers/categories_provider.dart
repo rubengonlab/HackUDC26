@@ -36,7 +36,7 @@ class CategoriesProvider extends ChangeNotifier {
     ),
     Category(
       id: 'family',
-      name: '👨‍👩‍👧‍👦 Familia',
+      name: '👨‍ Familia',
       color: '#FFFF5856',
       isDefault: true,
     ),

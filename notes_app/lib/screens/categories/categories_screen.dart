@@ -14,134 +14,95 @@ class CategoriesScreen extends StatefulWidget {
 }
 
 class _CategoriesScreenState extends State<CategoriesScreen> {
+  static const _kPrimary = Color(0xFFFF5856);
+  static const _kBg = Color(0xFF1A1F4D);
+  static const _kSurface = Color(0xFF252B5C);
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF1A1F4D), // Azul oscuro Kelea
+      backgroundColor: _kBg,
       appBar: AppBar(
-        title: const Text(
-          'Mis Categorías',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-        ),
-        backgroundColor: const Color(0xFF1A1F4D),
+        backgroundColor: _kBg,
         elevation: 0,
-        centerTitle: true,
         iconTheme: const IconThemeData(color: Colors.white),
-      ),
-      floatingActionButton: Consumer<CategoriesProvider>(
-        builder: (context, categoriesProvider, _) {
-          return FloatingActionButton(
-            onPressed: categoriesProvider.isSyncingCategories
-                ? null
-                : () => _showAddCategoryDialog(context),
-            backgroundColor: categoriesProvider.isSyncingCategories
-                ? const Color(0xFFFF5856).withValues(alpha: 0.4)
-                : const Color(0xFFFF5856),
-            tooltip: 'Agregar categoría',
-            child: const Icon(Icons.add, color: Colors.white),
-          );
-        },
+        // Sin título: el encabezado vive dentro del body para más impacto visual
+        title: const SizedBox.shrink(),
       ),
       body: Consumer<CategoriesProvider>(
         builder: (context, categoriesProvider, _) {
+          final selectedCount = categoriesProvider.selectedCategoryIds.length;
+
           return Stack(
             children: [
-              SingleChildScrollView(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 24, 16, 120),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Instrucción con estilo Kelea
-                      Text(
-                        'Selecciona al menos una categoría para continuar',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Colors.white70,
+              // ── Layout principal: encabezado + scroll + barra inferior ──
+              Column(
+                children: [
+                  // Encabezado fijo
+                  _buildHeader(selectedCount),
+
+                  // Zona scrollable con las categorías
+                  Expanded(
+                    child: CustomScrollView(
+                      slivers: [
+                        // ── Categorías sugeridas ──────────────────────────
+                        SliverToBoxAdapter(
+                          child: _buildSectionTitle(
+                            icon: Icons.auto_awesome,
+                            title: 'Sugeridas',
+                            subtitle: 'Elige las que mejor describan tus notas',
+                          ),
+                        ),
+                        SliverPadding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          sliver: _buildCategoryGrid(
+                            categories: categoriesProvider.defaultCategories,
+                            provider: categoriesProvider,
+                            isDeletable: false,
+                          ),
+                        ),
+
+                        // ── Categorías personalizadas ─────────────────────
+                        if (categoriesProvider.customCategories.isNotEmpty) ...[
+                          SliverToBoxAdapter(
+                            child: _buildSectionTitle(
+                              icon: Icons.edit_note,
+                              title: 'Creadas por ti',
+                              subtitle: 'Tus categorías personalizadas',
                             ),
-                      ),
-
-                      const SizedBox(height: 24),
-
-                      // Sección de categorías predeterminadas
-                      _buildCategorySection(
-                        title: 'Categorías Sugeridas',
-                        categories: categoriesProvider.defaultCategories,
-                        provider: categoriesProvider,
-                        isDeletable: false,
-                      ),
-
-                      const SizedBox(height: 32),
-
-                      // Sección de categorías personalizadas
-                      if (categoriesProvider.customCategories.isNotEmpty)
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildCategorySection(
-                              title: 'Mis Categorías',
+                          ),
+                          SliverPadding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            sliver: _buildCategoryGrid(
                               categories: categoriesProvider.customCategories,
                               provider: categoriesProvider,
                               isDeletable: true,
                             ),
-                            const SizedBox(height: 32),
-                          ],
-                        ),
+                          ),
+                        ],
 
-                      // Botón de continuar con estilo Kelea
-                      CustomButton(
-                        text: 'Continuar',
-                        onPressed: () async {
-                          if (categoriesProvider.selectedCategoryIds.isEmpty ||
-                              categoriesProvider.isSyncingCategories) {
-                            return;
-                          }
-
-                          final success = await categoriesProvider
-                              .syncSelectedCategoriesToBackend();
-
-                          if (!context.mounted) return;
-
-                          if (success) {
-                            context.push('/notes');
-                          } else if (categoriesProvider.error != null) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  categoriesProvider.error!,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                                backgroundColor: const Color(0xFFFF5856),
-                                duration: const Duration(seconds: 5),
-                                behavior: SnackBarBehavior.floating,
-                                margin: const EdgeInsets.all(16),
-                              ),
-                            );
-                          }
-                        },
-                        isPrimary: true,
-                        isLoading: categoriesProvider.isSyncingCategories,
-                        isEnabled: categoriesProvider.selectedCategoryIds.isNotEmpty,
-                        width: double.infinity,
-                      ),
-                    ],
+                        const SliverToBoxAdapter(child: SizedBox(height: 12)),
+                      ],
+                    ),
                   ),
-                ),
+
+                  // ── Barra inferior fija ───────────────────────────────────
+                  _buildBottomBar(context, categoriesProvider, selectedCount),
+                ],
               ),
-              // Overlay de carga mientras se sincronizan categorías
+
+              // ── Overlay de carga ──────────────────────────────────────────
               if (categoriesProvider.isSyncingCategories)
                 Container(
-                  color: Colors.black.withValues(alpha: 0.5),
+                  color: Colors.black.withValues(alpha: 0.6),
                   child: const Center(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        CircularProgressIndicator(color: Color(0xFFFF5856)),
+                        CircularProgressIndicator(color: _kPrimary),
                         SizedBox(height: 16),
                         Text(
-                          'Guardando categorías...',
+                          'Guardando tus categorías…',
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 16,
@@ -159,51 +120,276 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
     );
   }
 
-  Widget _buildCategorySection({
+  // ── Encabezado ─────────────────────────────────────────────────────────────
+  Widget _buildHeader(int selectedCount) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: _kSurface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: _kPrimary.withValues(alpha: 0.3), width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: _kPrimary.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Text('🗂️', style: TextStyle(fontSize: 24)),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Organiza tus notas',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'con categorías',
+                      style: TextStyle(
+                        color: _kPrimary,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Text(
+            'Cada nota que crees se clasificará automáticamente en las categorías que elijas ahora. Puedes cambiarlas cuando quieras.',
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.7),
+              fontSize: 13.5,
+              height: 1.5,
+            ),
+          ),
+          const SizedBox(height: 14),
+          // Contador de selección
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            decoration: BoxDecoration(
+              color: selectedCount > 0
+                  ? _kPrimary.withValues(alpha: 0.15)
+                  : Colors.white.withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(30),
+              border: Border.all(
+                color: selectedCount > 0
+                    ? _kPrimary.withValues(alpha: 0.6)
+                    : Colors.white.withValues(alpha: 0.1),
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  selectedCount > 0 ? Icons.check_circle : Icons.radio_button_unchecked,
+                  size: 16,
+                  color: selectedCount > 0 ? _kPrimary : Colors.white38,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  selectedCount == 0
+                      ? 'Ninguna seleccionada aún'
+                      : selectedCount == 1
+                          ? '1 categoría seleccionada'
+                          : '$selectedCount categorías seleccionadas',
+                  style: TextStyle(
+                    color: selectedCount > 0 ? _kPrimary : Colors.white38,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Título de sección ───────────────────────────────────────────────────────
+  Widget _buildSectionTitle({
+    required IconData icon,
     required String title,
+    required String subtitle,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
+      child: Row(
+        children: [
+          Icon(icon, color: _kPrimary, size: 20),
+          const SizedBox(width: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 16,
+                ),
+              ),
+              Text(
+                subtitle,
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.5),
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Grid de categorías como Sliver ──────────────────────────────────────────
+  Widget _buildCategoryGrid({
     required List<Category> categories,
     required CategoriesProvider provider,
     required bool isDeletable,
   }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: const Color(0xFFFF5856), // Rojo coral para títulos
-                fontWeight: FontWeight.w600,
-                fontSize: 16,
-              ),
-        ),
-        const SizedBox(height: 16),
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            childAspectRatio: 2.5,
-            crossAxisSpacing: 16,
-            mainAxisSpacing: 12,
+    return SliverGrid(
+      delegate: SliverChildBuilderDelegate(
+        (context, index) {
+          final category = categories[index];
+          return CategoryChip(
+            category: category,
+            isSelected: provider.selectedCategoryIds.contains(category.id),
+            onTap: () => provider.toggleCategorySelection(category.id),
+            isDeletable: isDeletable,
+            onDelete: () => provider.deleteCustomCategory(category.id),
+          );
+        },
+        childCount: categories.length,
+      ),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        childAspectRatio: 2.5,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+      ),
+    );
+  }
+
+  // ── Barra inferior fija ─────────────────────────────────────────────────────
+  Widget _buildBottomBar(
+    BuildContext context,
+    CategoriesProvider categoriesProvider,
+    int selectedCount,
+  ) {
+    final canContinue =
+        selectedCount > 0 && !categoriesProvider.isSyncingCategories;
+
+    return SafeArea(
+      child: Container(
+        decoration: BoxDecoration(
+          color: _kBg,
+          border: Border(
+            top: BorderSide(color: Colors.white.withValues(alpha: 0.08), width: 1),
           ),
-          itemCount: categories.length,
-          itemBuilder: (context, index) {
-            final category = categories[index];
-            return CategoryChip(
-              category: category,
-              isSelected:
-                  provider.selectedCategoryIds.contains(category.id),
-              onTap: () {
-                provider.toggleCategorySelection(category.id);
-              },
-              isDeletable: isDeletable,
-              onDelete: () {
-                provider.deleteCustomCategory(category.id);
-              },
-            );
-          },
         ),
-      ],
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                // Botón principal "Continuar" — ocupa todo el espacio disponible
+                Expanded(
+                  child: CustomButton(
+                    text: canContinue
+                        ? 'Empezar con $selectedCount ${selectedCount == 1 ? 'categoría' : 'categorías'} →'
+                        : 'Selecciona una categoría',
+                    onPressed: () async {
+                      if (!canContinue) return;
+                      final success =
+                          await categoriesProvider.syncSelectedCategoriesToBackend();
+                      if (!context.mounted) return;
+                      if (success) {
+                        context.push('/notes');
+                      } else if (categoriesProvider.error != null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              categoriesProvider.error!,
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w500),
+                            ),
+                            backgroundColor: _kPrimary,
+                            duration: const Duration(seconds: 5),
+                            behavior: SnackBarBehavior.floating,
+                            margin: const EdgeInsets.all(16),
+                          ),
+                        );
+                      }
+                    },
+                    isPrimary: true,
+                    isLoading: categoriesProvider.isSyncingCategories,
+                    isEnabled: canContinue,
+                  ),
+                ),
+
+                const SizedBox(width: 12),
+
+                // Botón "Nueva categoría" — abajo a la derecha, tamaño fijo
+                FloatingActionButton(
+                  heroTag: 'add_category_fab',
+                  onPressed: categoriesProvider.isSyncingCategories
+                      ? null
+                      : () => _showAddCategoryDialog(context),
+                  backgroundColor: categoriesProvider.isSyncingCategories
+                      ? _kPrimary.withValues(alpha: 0.4)
+                      : _kSurface,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    side: BorderSide(
+                      color: _kPrimary.withValues(alpha: 0.6),
+                      width: 1.5,
+                    ),
+                  ),
+                  tooltip: 'Nueva categoría',
+                  child: const Icon(Icons.add, color: Colors.white),
+                ),
+              ],
+            ),
+
+            // Aviso debajo cuando no hay selección
+            if (selectedCount == 0)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  'Selecciona al menos una categoría para continuar',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.45),
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 
