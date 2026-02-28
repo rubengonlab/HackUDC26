@@ -12,49 +12,55 @@ class CategoriesProvider extends ChangeNotifier {
     Category(
       id: 'hobbies',
       name: '🎮 Pasatiempos',
-      color: '#FFA855F7',
+      color: '#FFFF5856',
       isDefault: true,
     ),
     Category(
       id: 'learning',
       name: '📚 Aprendizaje',
-      color: '#FF3B82F6',
+      color: '#FFFF5856',
       isDefault: true,
     ),
     Category(
       id: 'projects',
       name: '🚀 Proyectos',
-      color: '#FF10B981',
+      color: '#FFFF5856',
       isDefault: true,
     ),
     Category(
       id: 'health',
       name: '💪 Salud & Bienestar',
-      color: '#FFEC4899',
+      color: '#FFFF5856',
       isDefault: true,
     ),
     Category(
       id: 'family',
       name: '👨‍👩‍👧‍👦 Familia',
-      color: '#FFF97316',
+      color: '#FFFF5856',
       isDefault: true,
     ),
     Category(
       id: 'shopping',
       name: '🛍️ Compras & Regalos',
-      color: '#FFE879F9',
+      color: '#FFFF5856',
       isDefault: true,
     ),
     Category(
       id: 'food',
       name: '🍽️ Comida',
-      color: '#FF84CC16',
+      color: '#FFFF5856',
       isDefault: true,
     ),
     Category(
       id: 'finances',
       name: '💰 Finanzas',
-      color: '#FF06B6D4',
+      color: '#FFFF5856',
+      isDefault: true,
+    ),
+    Category(
+      id: 'trips',
+      name: '✈️ Viajes',
+      color: '#FFFF5856',
       isDefault: true,
     ),
   ];
@@ -149,17 +155,7 @@ class CategoriesProvider extends ChangeNotifier {
   }
 
   String _generateRandomColor() {
-    const colors = [
-      '#FF6200EE',
-      '#FF03DAC6',
-      '#FFFFC107',
-      '#FFFF5722',
-      '#FF4CAF50',
-      '#FFFF1744',
-      '#FF2196F3',
-      '#FF9C27B0',
-    ];
-    return (colors..shuffle()).first;
+    return '#FFFF5856'; // Rojo coral Kelea - Color del botón
   }
 }
 

@@ -40,7 +40,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
         builder: (context, categoriesProvider, _) {
           return SingleChildScrollView(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+              padding: const EdgeInsets.fromLTRB(16, 24, 16, 120),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -119,10 +119,18 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
               ),
         ),
         const SizedBox(height: 16),
-        Wrap(
-          spacing: 10,
-          runSpacing: 10,
-          children: categories.map((category) {
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            childAspectRatio: 2.5,
+            crossAxisSpacing: 16,
+            mainAxisSpacing: 12,
+          ),
+          itemCount: categories.length,
+          itemBuilder: (context, index) {
+            final category = categories[index];
             return CategoryChip(
               category: category,
               isSelected:
@@ -135,7 +143,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                 provider.deleteCustomCategory(category.id);
               },
             );
-          }).toList(),
+          },
         ),
       ],
     );
