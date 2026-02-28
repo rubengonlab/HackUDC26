@@ -25,7 +25,8 @@ public class AudioConversor {
                 capture.getCategoryStatus().name(),
                 capture.getCategory() != null ? capture.getCategory().getId() : null,
                 capture.getTitle(),
-                capture.getContextText());
+                capture.getContextText(),
+                audio.getParsedText());
     }
 
     public List<AudioDto> toAudioDtos(List<Audio> audios, java.util.function.Function<Audio, String> contentUrlBuilder) {

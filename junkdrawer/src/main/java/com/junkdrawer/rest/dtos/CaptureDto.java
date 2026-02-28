@@ -108,6 +108,7 @@ public class CaptureDto {
         private Long size;
         private String storagePath;
         private String contentUrl;
+        private String parsedText;
 
         public Long getId() {
             return id;
@@ -163,6 +164,14 @@ public class CaptureDto {
 
         public void setContentUrl(String contentUrl) {
             this.contentUrl = contentUrl;
+        }
+
+        public String getParsedText() {
+            return parsedText;
+        }
+
+        public void setParsedText(String parsedText) {
+            this.parsedText = parsedText;
         }
     }
 

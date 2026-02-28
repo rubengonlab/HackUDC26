@@ -4,31 +4,31 @@ import java.time.LocalDateTime;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
-@Schema(name = "Audio", description = "Recurso de audio asociado a una captura.")
-public class AudioDto {
+@Schema(name = "Image", description = "Recurso de imagen asociado a una captura.")
+public class ImageDto {
 
-    @Schema(description = "Identificador del audio", example = "1")
+    @Schema(description = "Identificador de la imagen", example = "1")
     private Long id;
 
     @Schema(description = "Identificador de la captura asociada", example = "10")
     private Long captureId;
 
-    @Schema(description = "Nombre interno del fichero", example = "8ec1e247-44c2-4122-a631-1efd8cce1b25.mp3")
+    @Schema(description = "Nombre interno del fichero", example = "8ec1e247-44c2-4122-a631-1efd8cce1b25.jpg")
     private String fileName;
 
-    @Schema(description = "Nombre original del fichero", example = "nota-voz.mp3")
+    @Schema(description = "Nombre original del fichero", example = "captura.jpg")
     private String originalFileName;
 
-    @Schema(description = "Tipo MIME del fichero", example = "audio/mpeg")
+    @Schema(description = "Tipo MIME del fichero", example = "image/jpeg")
     private String mimeType;
 
-    @Schema(description = "Tamano del fichero en bytes", example = "98321")
+    @Schema(description = "Tamano del fichero en bytes", example = "253321")
     private Long size;
 
-    @Schema(description = "Ruta de almacenamiento en servidor", example = "uploads/audio/8ec1e247-44c2-4122-a631-1efd8cce1b25.mp3")
+    @Schema(description = "Ruta de almacenamiento en servidor", example = "uploads/image/8ec1e247-44c2-4122-a631-1efd8cce1b25.jpg")
     private String storagePath;
 
-    @Schema(description = "URL publica para reproducir/descargar el audio", example = "http://localhost:8080/audio/1/content")
+    @Schema(description = "URL publica para visualizar/descargar la imagen", example = "http://localhost:8080/image/1/content")
     private String contentUrl;
 
     @Schema(description = "Fecha de creacion de la captura", example = "2026-02-28T13:00:00")
@@ -40,21 +40,18 @@ public class AudioDto {
     @Schema(description = "Id de categoria si existe", example = "2", accessMode = Schema.AccessMode.READ_ONLY)
     private Long categoryId;
 
-    @Schema(description = "Titulo resumido generado para la captura", example = "Resumen de reunion", accessMode = Schema.AccessMode.READ_ONLY)
+    @Schema(description = "Titulo resumido generado para la captura", example = "Resumen del ticket", accessMode = Schema.AccessMode.READ_ONLY)
     private String title;
 
-    @Schema(description = "Contexto/transcripcion asociada", example = "Notas de voz sobre roadmap")
+    @Schema(description = "Contexto asociado", example = "Foto de pantalla del error")
     private String contextText;
 
-    @Schema(description = "Texto parseado/transcrito del audio. Puede ser nulo si no se pudo transcribir", example = "Recordatorio: enviar acta de la reunion")
-    private String parsedText;
-
-    public AudioDto() {
+    public ImageDto() {
     }
 
-    public AudioDto(Long id, Long captureId, String fileName, String originalFileName, String mimeType, Long size,
+    public ImageDto(Long id, Long captureId, String fileName, String originalFileName, String mimeType, Long size,
             String storagePath, String contentUrl, LocalDateTime createdAt, String categoryStatus, Long categoryId,
-            String title, String contextText, String parsedText) {
+            String title, String contextText) {
         this.id = id;
         this.captureId = captureId;
         this.fileName = fileName;
@@ -68,7 +65,6 @@ public class AudioDto {
         this.categoryId = categoryId;
         this.title = title;
         this.contextText = contextText;
-        this.parsedText = parsedText;
     }
 
     public Long getId() {
@@ -173,13 +169,5 @@ public class AudioDto {
 
     public void setContextText(String contextText) {
         this.contextText = contextText;
-    }
-
-    public String getParsedText() {
-        return parsedText;
-    }
-
-    public void setParsedText(String parsedText) {
-        this.parsedText = parsedText;
     }
 }

@@ -6,6 +6,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.Lob;
 import jakarta.persistence.OneToOne;
 
 @Entity
@@ -18,6 +19,7 @@ public class Audio {
     private String mimeType;
     private Long size;
     private String storagePath;
+    private String parsedText;
 
     public Audio() {
     }
@@ -80,5 +82,14 @@ public class Audio {
 
     public void setStoragePath(String storagePath) {
         this.storagePath = storagePath;
+    }
+
+    @Lob
+    public String getParsedText() {
+        return parsedText;
+    }
+
+    public void setParsedText(String parsedText) {
+        this.parsedText = parsedText;
     }
 }

@@ -25,7 +25,7 @@ CREATE TABLE Capture (
 
 CREATE TABLE Note (
     id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    content VARCHAR(500) NOT NULL,
+    content CLOB NOT NULL,
     captureId BIGINT NOT NULL UNIQUE,
     FOREIGN KEY (captureId) REFERENCES Capture(id) ON DELETE CASCADE
 );
@@ -45,6 +45,7 @@ CREATE TABLE Audio (
     mimeType VARCHAR(100) NOT NULL,
     size BIGINT NOT NULL,
     storagePath VARCHAR(500) NOT NULL,
+    parsedText CLOB NULL,
     captureId BIGINT NOT NULL UNIQUE,
     FOREIGN KEY (captureId) REFERENCES Capture(id) ON DELETE CASCADE
 );
