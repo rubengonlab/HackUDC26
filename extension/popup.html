@@ -3,127 +3,269 @@
 <head>
   <meta charset="UTF-8">
   <style>
-    /* COLORES OFICIALES KELEA (Desde Flutter) */
+    /* TEMA OSCURO CORPORATIVO KELEA */
     :root {
-      --primary: #1A1F4D;       /* Azul oscuro Kelea */
-      --accent: #FF5856;        /* Rojo coral Kelea */
-      --bg-color: #F8F9FB;      /* Blanco muy suave */
-      --surface: #FFFFFF;       /* Blanco puro */
-      --border: #E8EDF2;        /* Gris muy claro */
-      --text-main: #1A1F4D;     /* Texto en azul oscuro */
-      --text-sec: #6B7280;      /* Gris medio */
-      --success: #10B981;       /* Verde suave para aciertos */
-      --transition: all 0.2s ease-in-out;
+      --primary: #1A1F4D;       
+      --primary-dark: #10142B;  
+      --primary-light: #2A3166; 
+      --accent: #FF5856;        
+      --accent-hover: #E54B49;  
+      --bg-color: #10142B;      
+      --surface: #1A1F4D;       
+      --border: #2A3166;        
+      --text-main: #FFFFFF;     
+      --text-muted: #9BA4D5;    
+      --success: #10B981;       
     }
 
     body {
-      width: 360px; /* 1. POPUP MÁS GRANDE (antes 320px) */
+      width: 360px;
+      height: 520px; 
       padding: 0;
-      font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
       margin: 0;
       background-color: var(--bg-color);
       color: var(--text-main);
-      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      border-top: 4px solid var(--accent); 
     }
 
-    /* 2. MÁS ESPACIO INTERIOR para que respire y se vea premium */
-    .screen { display: none; padding: 32px; animation: fadeIn 0.3s ease; }
+    .screen { display: none; height: 100%; flex-direction: column; }
+    
+    /* --- PANTALLA DE LOGIN --- */
+    #pantallaLogin { padding: 32px; box-sizing: border-box; justify-content: center; background-color: var(--surface);}
+    .login-header { display: flex; align-items: center; gap: 12px; margin-bottom: 32px; }
+    .logo-icon { width: 32px; height: 32px; background-color: var(--accent); border-radius: 6px; }
+    .login-header h3 { margin: 0; color: var(--text-main); font-size: 20px; font-weight: 600; }
+    
+    input {
+      width: 100%; padding: 14px; margin-bottom: 16px;
+      border: 1px solid var(--border); border-radius: 8px;
+      box-sizing: border-box; font-size: 14px; outline: none;
+      background-color: var(--primary-dark);
+      color: var(--text-main);
+      transition: all 0.2s;
+    }
+    input::placeholder { color: #6974A3; }
+    input:focus { border-color: var(--accent); background-color: var(--surface); box-shadow: 0 0 0 3px rgba(255, 88, 86, 0.15);}
+    
+    .btn-primary {
+      width: 100%; padding: 14px; background-color: var(--accent);
+      color: white; border: none; border-radius: 8px; font-weight: 600; font-size: 14px;
+      cursor: pointer; transition: background-color 0.2s; letter-spacing: 0.5px;
+    }
+    .btn-primary:hover { background-color: var(--accent-hover); }
 
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(5px); }
-      to { opacity: 1; transform: translateY(0); }
+    /* --- PANTALLA PRINCIPAL (APP) --- */
+    .chat-header {
+      background-color: var(--surface);
+      color: var(--text-main);
+      padding: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+      z-index: 10;
+    }
+    .chat-header h3 { margin: 0; font-size: 16px; display: flex; align-items: center; gap: 10px; font-weight: 600;}
+    .header-logo { width: 20px; height: 20px; background-color: var(--accent); border-radius: 6px; }
+    .logout { 
+      cursor: pointer; font-size: 13px; font-weight: 500; color: var(--text-muted); 
+      background: none; border: none; padding: 6px 10px; border-radius: 6px; transition: all 0.2s;
+    }
+    .logout:hover { background-color: var(--primary-light); color: var(--accent); }
+
+    /* --- SISTEMA DE NOTIFICACIONES --- */
+    .toast-container {
+      position: absolute;
+      top: 65px; left: 0; right: 0;
+      padding: 0 16px;
+      display: flex; flex-direction: column;
+      gap: 8px; z-index: 20; pointer-events: none; 
     }
 
-    /* CABECERA MINIMALISTA */
-    .header {
+    .toast {
+      background-color: var(--primary-light);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--success);
+      box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+      border-radius: 8px;
+      padding: 12px 16px;
+      display: flex; flex-direction: column;
+      animation: slideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1), fadeOut 0.4s ease 2.5s forwards;
+      pointer-events: auto;
+    }
+    .toast.error { border-left-color: var(--accent); }
+    .toast-title { font-weight: 600; font-size: 13px; color: var(--text-main); margin-bottom: 4px;}
+    .toast-subtitle { font-size: 12px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+
+    @keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @keyframes fadeOut { to { opacity: 0; visibility: hidden; } }
+
+    /* --- ÁREA CENTRAL --- */
+    .app-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 24px 32px 12px 32px;
+      text-align: center;
+      background: linear-gradient(180deg, var(--bg-color) 0%, var(--surface) 100%);
+    }
+    
+    .empty-state-wrapper { margin: auto; }
+    .empty-state-icon { font-size: 48px; margin-bottom: 12px; filter: drop-shadow(0 0 12px rgba(255, 88, 86, 0.2));}
+    .empty-state-text { color: var(--text-muted); font-size: 14px; line-height: 1.5;}
+    .empty-state-text strong { color: var(--text-main); font-size: 15px;}
+
+    #estado { 
+      font-size: 12px; font-weight: 600; color: var(--text-muted); 
+      margin-top: auto; min-height: 18px; 
+    }
+    #estado:empty { display: none; }
+
+    /* --- ZONA DE ENTRADA (ESTILO TEXTAREA CON SCROLL) --- */
+    .app-footer {
+      display: flex; padding: 16px;
+      background-color: var(--surface);
+      border-top: 1px solid var(--border);
+      align-items: flex-end; gap: 12px;
+    }
+
+    .input-wrapper {
+      flex: 1; background-color: var(--primary-dark);
+      border: 1px solid var(--border); border-radius: 12px;
+      display: flex; align-items: flex-start; 
+      padding: 0 4px 0 12px; transition: all 0.2s;
+    }
+    .input-wrapper:focus-within { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(255, 88, 86, 0.15); }
+
+    textarea {
+      flex: 1; border: none; outline: none; resize: none;
+      font-size: 14px; font-family: inherit; color: var(--text-main);
+      padding: 14px 8px 14px 0; min-height: 120px; max-height: 280px; 
+      background: transparent; line-height: 1.5;
+    }
+    textarea::placeholder { color: #6974A3; }
+
+    /* Scrollbar personalizada Kelea */
+    textarea::-webkit-scrollbar { width: 6px; }
+    textarea::-webkit-scrollbar-track { background: transparent; margin: 10px 0; }
+    textarea::-webkit-scrollbar-thumb { background-color: var(--primary-light); border-radius: 10px; }
+    textarea::-webkit-scrollbar-thumb:hover { background-color: var(--accent); }
+
+    /* --- INTERFAZ DE GRABACIÓN ELEGANTE --- */
+    #recordingUI {
+      display: none; flex: 1; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 16px; min-height: 120px; 
+      background-color: rgba(255, 88, 86, 0.05); 
+      border: 1px dashed rgba(255, 88, 86, 0.4);
+      border-radius: 12px; gap: 8px;
+    }
+
+    .recording-indicator { display: flex; align-items: center; gap: 8px; color: var(--accent); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;}
+    .dot { width: 8px; height: 8px; background-color: var(--accent); border-radius: 50%; animation: blink 1.5s infinite; }
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+    
+    #tiempoGrabacion { font-variant-numeric: tabular-nums; font-weight: 700; font-size: 36px; color: var(--text-main); margin-bottom: 4px;}
+    
+    /* ENLACE DE CANCELAR ELEGANTE */
+    .cancel-link { 
+      background: none; border: none;
+      color: var(--text-muted); font-size: 13px; font-weight: 500;
+      cursor: pointer; padding: 5px 10px;
+      text-decoration: underline; text-underline-offset: 3px;
+      transition: all 0.2s ease;
+    }
+    .cancel-link:hover { color: var(--accent); background-color: rgba(255, 88, 86, 0.1); border-radius: 4px; text-decoration: none; }
+
+    /* --- BOTONES DE ACCIÓN --- */
+    .action-btn {
+      width: 48px; height: 48px; border-radius: 12px; border: none;
       display: flex; align-items: center; justify-content: center;
-      margin-bottom: 28px; gap: 12px;
+      cursor: pointer; color: white;
+      background-color: var(--accent); 
+      box-shadow: 0 4px 12px rgba(255, 88, 86, 0.25); 
+      transition: all 0.2s ease; flex-shrink: 0;
     }
-    /* 3. BORDES MÁS REDONDOS EN EL LOGO */
-    .logo-icon { width: 22px; height: 22px; background-color: var(--accent); border-radius: 8px; }
-    h3 { margin: 0; font-weight: 600; font-size: 19px; letter-spacing: 0.25px; color: var(--text-main); }
-
-    /* INPUTS ELEGANTES */
-    input, textarea {
-      width: 100%; margin-bottom: 18px; padding: 15px 18px; box-sizing: border-box;
-      background-color: var(--surface); border: 1px solid var(--border); 
-      border-radius: 12px; /* 4. BORDES MUCHO MÁS REDONDEADOS (antes 8px) */
-      color: var(--text-main); font-family: inherit; font-size: 14px; transition: var(--transition);
-      box-shadow: 0 2px 4px rgba(0,0,0,0.02); /* Sutil sombra interior */
+    .action-btn:hover { 
+      background-color: var(--accent-hover); 
+      transform: translateY(-2px); 
+      box-shadow: 0 6px 16px rgba(255, 88, 86, 0.4);
     }
-    input:focus, textarea:focus { 
-      outline: none; border-color: var(--accent); border-width: 2px; 
-      padding: 14px 17px; 
-      box-shadow: 0 4px 12px rgba(255, 88, 86, 0.1); /* Brillo sutil al hacer foco */
-    }
-    textarea { height: 120px; resize: none; line-height: 1.5; }
-    input::placeholder, textarea::placeholder { color: var(--text-sec); opacity: 0.6; }
-
-    /* BOTONES */
-    button {
-      width: 100%; padding: 15px 32px; border: none; cursor: pointer; 
-      border-radius: 12px; /* 5. BORDES MUCHO MÁS REDONDEADOS (antes 8px) */
-      font-weight: 600; font-size: 15px; letter-spacing: 0.5px; transition: var(--transition);
-    }
-    button:active { transform: scale(0.97); }
-
-    /* Variantes de Botones como en Flutter */
-    .btn-primary { 
-      background-color: var(--primary); color: white; 
-      box-shadow: 0 4px 10px rgba(26, 31, 77, 0.15); /* Sombra para dar volumen */
-    }
-    .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+    .action-btn:active { transform: translateY(1px); }
+    #btnGuardar { display: none; }
     
-    .btn-outlined { background-color: var(--surface); color: var(--primary); border: 1.5px solid var(--border); }
-    .btn-outlined:hover { border-color: var(--primary); background-color: #F0F2F5; }
+    .action-btn.is-recording { animation: pulse-glow 1.5s infinite; }
 
-    .btn-accent { 
-      background-color: var(--accent); color: white; 
-      box-shadow: 0 4px 10px rgba(255, 88, 86, 0.2); 
-    }
-    .btn-accent:hover { opacity: 0.9; transform: translateY(-1px); }
-
-    .btn-salir { background-color: transparent; color: var(--text-sec); font-size: 13px; padding: 8px; margin-top: 12px; box-shadow: none; }
-    .btn-salir:hover { color: var(--accent); background-color: transparent; transform: none; }
-
-    /* ESTADO */
-    #estado { font-size: 13px; text-align: center; margin-top: 16px; min-height: 1.2em; font-weight: 500; }
-    
-    @keyframes pulse-light {
-      0% { box-shadow: 0 0 0 0 rgba(255, 88, 86, 0.4); }
+    @keyframes pulse-glow {
+      0% { box-shadow: 0 0 0 0 rgba(255, 88, 86, 0.6); }
       70% { box-shadow: 0 0 0 12px rgba(255, 88, 86, 0); }
       100% { box-shadow: 0 0 0 0 rgba(255, 88, 86, 0); }
     }
+
+    .icon-svg { stroke: currentColor; fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
   </style>
 </head>
 <body>
   <div id="pantallaLogin" class="screen">
-    <div class="header">
+    <div class="login-header">
       <div class="logo-icon"></div>
-      <h3>Login Kelea</h3>
+      <h3>Kelea JunkDrawer</h3>
     </div>
-    <input type="text" id="fakeUser" placeholder="ID de Usuario">
+    <input type="text" id="fakeUser" placeholder="ID de Usuario corporativo">
     <input type="password" id="fakePass" placeholder="Contraseña">
-    <button id="btnEntrar" class="btn-primary">INICIAR SESIÓN</button>
+    <button id="btnEntrar" class="btn-primary">ACCEDER</button>
   </div>
 
   <div id="pantallaApp" class="screen">
-    <div class="header" style="justify-content: flex-start;">
-      <div class="logo-icon" style="width: 16px; height: 16px; border-radius: 6px;"></div>
-      <h3 style="font-size: 16px;">¡Añade una nueva nota!</h3>
+    <div class="chat-header">
+      <h3><div class="header-logo"></div> JunkDrawer</h3>
+      <button id="btnSalir" class="logout">Cerrar sesión</button>
     </div>
+
+    <div class="toast-container" id="toastContainer"></div>
     
-    <textarea id="textoNota" placeholder="Escribe una nota o captura texto..."></textarea>
-    <button id="btnGuardar" class="btn-primary" style="margin-bottom: 16px;">GUARDAR NOTA</button>
-
-    <div style="display: flex; gap: 10px; margin-bottom: 12px;">
-      <button id="btnGrabar" class="btn-outlined" style="flex: 1;">AUDIO</button>
-      <button id="btnCancelar" class="btn-outlined" style="flex: 1; display: none;">CANCELAR</button>
-      <button id="btnDetener" class="btn-accent" style="flex: 1; display: none; animation: pulse-light 1.5s infinite;">ENVIAR</button>
+    <div class="app-body">
+      <div class="empty-state-wrapper">
+        <div class="empty-state-icon">📥</div>
+        <div class="empty-state-text">
+          <strong>Cajón digital sincronizado.</strong><br>
+          Captura todo lo que necesites recordar.
+        </div>
+      </div>
+      <div id="estado"></div>
     </div>
 
-    <div id="estado"></div>
-    <button id="btnSalir" class="btn-salir">Cerrar sesión</button>
+    <div class="app-footer" id="bottomBar">
+      <div class="input-wrapper" id="inputWrapper">
+        <textarea id="textoNota" placeholder="Empieza a escribir tu nota aquí..."></textarea>
+      </div>
+
+      <div id="recordingUI">
+        <div class="recording-indicator"><div class="dot"></div> Grabando audio...</div>
+        <div id="tiempoGrabacion">00:00</div>
+        <button id="btnCancelar" class="cancel-link">Descartar nota</button>
+      </div>
+
+      <button id="btnGrabar" class="action-btn" title="Grabar nota de voz">
+        <svg width="22" height="22" class="icon-svg" viewBox="0 0 24 24">
+          <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+          <line x1="12" y1="19" x2="12" y2="22"></line>
+        </svg>
+      </button>
+
+      <button id="btnGuardar" class="action-btn" title="Sincronizar nota">
+        <svg width="22" height="22" class="icon-svg" viewBox="0 0 24 24">
+          <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+          <polyline points="17 21 17 13 7 13 7 21"></polyline>
+          <polyline points="7 3 7 8 15 8"></polyline>
+        </svg>
+      </button>
+    </div>
   </div>
 
   <script src="popup.js"></script>

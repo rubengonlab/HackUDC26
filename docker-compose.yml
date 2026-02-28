@@ -12,8 +12,16 @@ services:
     restart: unless-stopped
     networks:
       - junkdrawer-network
-  ### AÑADIR MÁS SERVICIOS
-
+  
+  whisper-api:
+    image: fedirz/faster-whisper-server:latest-cpu
+    container_name: whisper
+    environment:
+      - WHISPER_MODEL=small
+      - LANGUAGE=es
+    restart: unless-stopped
+    networks:
+      - junkdrawer-network
 
 networks:
   junkdrawer-network:
