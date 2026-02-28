@@ -54,18 +54,21 @@ public class NoteServiceImpl implements NoteService {
         Note note = new Note();
         note.setCapture(capture);
         note.setText(content);
+        note.setTextStatus(Note.TextStatus.PENDING);
 
         note = noteDao.save(note);
-        applySuggestedCategory(capture, content);
+        applySuggestedCategoryAndReorderedText(capture, note, content);
 
         return note;
     }
 
-    private void applySuggestedCategory(Capture capture, String noteText) {
+    private void applySuggestedCategoryAndReorderedText(Capture capture, Note note, String noteText) {
         List<Category> allCategories = categoryDao.findAllByOrderByNameAsc();
         if (allCategories.isEmpty()) {
             capture.setCategoryStatus(Capture.CategoryStatus.UNCATEGORIZED);
             captureDao.save(capture);
+            note.setTextStatus(Note.TextStatus.FAILED);
+            noteDao.save(note);
             return;
         }
 
@@ -74,10 +77,18 @@ public class NoteServiceImpl implements NoteService {
                 .collect(Collectors.toList());
 
         try {
-            BedrockNovaService.AiProcessingResult aiResult = bedrockNovaService.procesarTexto(categoryNames, noteText);
+            BedrockNovaService.NoteAiProcessingResult aiResult = bedrockNovaService.procesarNota(categoryNames, noteText);
             if (aiResult.title() != null && !aiResult.title().isBlank()) {
                 capture.setTitle(aiResult.title().trim());
             }
+
+            if (aiResult.reorderedText() != null && !aiResult.reorderedText().isBlank()) {
+                note.setReorderedText(aiResult.reorderedText().trim());
+                note.setTextStatus(Note.TextStatus.PROCESSED);
+            } else {
+                note.setTextStatus(Note.TextStatus.FAILED);
+            }
+            noteDao.save(note);
 
             String predictedCategory = aiResult.category();
             if (predictedCategory == null || predictedCategory.isBlank()) {
@@ -107,6 +118,8 @@ public class NoteServiceImpl implements NoteService {
         } catch (Exception e) {
             capture.setCategoryStatus(Capture.CategoryStatus.UNCATEGORIZED);
             captureDao.save(capture);
+            note.setTextStatus(Note.TextStatus.FAILED);
+            noteDao.save(note);
             logger.warn("No se pudo clasificar automáticamente la nota: {}", e.getMessage());
         }
     }
@@ -117,6 +130,7 @@ public class NoteServiceImpl implements NoteService {
 
         Note note = new Note();
         note.setText(text);
+        note.setTextStatus(Note.TextStatus.PENDING);
         note.setCapture(capture);
 
         return noteDao.save(note);
@@ -134,6 +148,8 @@ public class NoteServiceImpl implements NoteService {
         Capture capture = permissionChecker.checkCaptureExists(captureId);
 
         note.setText(text);
+        note.setTextStatus(Note.TextStatus.PENDING);
+        note.setReorderedText(null);
         note.setCapture(capture);
 
         return noteDao.save(note);

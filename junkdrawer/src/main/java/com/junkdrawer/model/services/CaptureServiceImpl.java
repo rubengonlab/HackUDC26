@@ -2,6 +2,7 @@ package com.junkdrawer.model.services;
 
 import java.time.LocalDateTime;
 import java.time.LocalDate;
+import java.util.List;
 
 import org.springframework.data.domain.Slice;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -80,6 +81,19 @@ public class CaptureServiceImpl implements CaptureService {
         LocalDateTime createdToExclusive = dateTo != null ? dateTo.plusDays(1).atStartOfDay() : null;
 
         Slice<Capture> slice = captureDao.getCaptures(createdFrom, createdToExclusive, categoryId, captureType, page, size);
+        return new Block<>(slice.getContent(), slice.hasNext());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Capture.CaptureType> getUsedCaptureTypes() {
+        return captureDao.getUsedCaptureTypes();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Block<LocalDate> getCaptureDays(int page, int size) {
+        Slice<LocalDate> slice = captureDao.getCaptureDays(page, size);
         return new Block<>(slice.getContent(), slice.hasNext());
     }
 }

@@ -1,6 +1,7 @@
 package com.junkdrawer.rest.controllers;
 
 import java.time.LocalDate;
+import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -53,6 +54,32 @@ public class CaptureController {
         Block<Capture> captures = captureService.getCaptures(date, date, categoryId, captureType, page, size);
 
         return new BlockDto<>(captureConversor.toCaptureDtos(captures.getItems()), captures.getExistMoreItems());
+    }
+
+    @Operation(summary = "Listar tipos de captura usados",
+            description = "Devuelve los CaptureType que existen realmente en capturas.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Listado de tipos usados")
+    })
+    @GetMapping("/types")
+    public List<String> getUsedCaptureTypes() {
+        return captureService.getUsedCaptureTypes().stream()
+                .map(Enum::name)
+                .toList();
+    }
+
+    @Operation(summary = "Listar días con capturas",
+            description = "Devuelve días (distinct) en los que hay capturas, paginados y ordenados por más reciente.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Listado paginado de días")
+    })
+    @GetMapping("/days")
+    public BlockDto<LocalDate> getCaptureDays(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+
+        Block<LocalDate> days = captureService.getCaptureDays(page, size);
+        return new BlockDto<>(days.getItems(), days.getExistMoreItems());
     }
 
     private Capture.CaptureType parseCaptureType(String fileType) {
