@@ -3,7 +3,6 @@ services:
     build:
       context: ./junkdrawer
       dockerfile: Dockerfile
-      network: host
     container_name: backend
     ports:
       - "8080:8080"
@@ -17,8 +16,10 @@ services:
     image: fedirz/faster-whisper-server:latest-cpu
     container_name: whisper
     environment:
-      - WHISPER_MODEL=small
+      - WHISPER_MODEL=medium
       - LANGUAGE=es
+    volumes:
+      - ./whisper_cache:/root/.cache/huggingface
     restart: unless-stopped
     networks:
       - junkdrawer-network
