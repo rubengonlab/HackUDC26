@@ -17,7 +17,7 @@ CREATE TABLE Capture (
     captureType VARCHAR(30) NOT NULL,
     categoryStatus VARCHAR(30) NOT NULL DEFAULT 'UNCATEGORIZED',
     title VARCHAR(200),
-    contextText VARCHAR(500),
+    contextText CLOB,
     origin VARCHAR(30),
     categoryId BIGINT,
     FOREIGN KEY (categoryId) REFERENCES Category(id) ON DELETE SET NULL
