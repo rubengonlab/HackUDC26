@@ -23,16 +23,16 @@ class CategoriesProvider extends ChangeNotifier {
 
   // ── Categorías por defecto (pantalla de selección inicial) ───────────────
   static final List<Category> _defaultCategories = [
-    Category(id: 'work',      name: '💼 Trabajo',         color: '#FFFF5856', isDefault: true),
-    Category(id: 'hobbies',   name: '🎮 Pasatiempos',      color: '#FF4C9FE0', isDefault: true),
-    Category(id: 'learning',  name: '📚 Aprendizaje',      color: '#FF56C288', isDefault: true),
-    Category(id: 'projects',  name: '🚀 Proyectos',        color: '#FFFFC107', isDefault: true),
-    Category(id: 'health',    name: '💪 Salud & Bienestar', color: '#FFE040FB', isDefault: true),
-    Category(id: 'family',    name: '👨‍👩‍👧‍👦 Familia',         color: '#FFFF7043', isDefault: true),
-    Category(id: 'shopping',  name: '🛍️ Compras & Regalos', color: '#FF26C6DA', isDefault: true),
-    Category(id: 'food',      name: '🍽️ Comida',            color: '#FFEF5350', isDefault: true),
-    Category(id: 'finances',  name: '💰 Finanzas',          color: '#FF66BB6A', isDefault: true),
-    Category(id: 'trips',     name: '✈️ Viajes',            color: '#FFAB47BC', isDefault: true),
+    Category(id: 'work',      name: 'Trabajo',         color: '#FFFF5856', isDefault: true),
+    Category(id: 'hobbies',   name: 'Pasatiempos',      color: '#FF4C9FE0', isDefault: true),
+    Category(id: 'learning',  name: 'Aprendizaje',      color: '#FF56C288', isDefault: true),
+    Category(id: 'projects',  name: 'Proyectos',        color: '#FFFFC107', isDefault: true),
+    Category(id: 'health',    name: 'Salud & Bienestar', color: '#FFE040FB', isDefault: true),
+    Category(id: 'family',    name: 'Familia',         color: '#FFFF7043', isDefault: true),
+    Category(id: 'shopping',  name: 'Compras & Regalos', color: '#FF26C6DA', isDefault: true),
+    Category(id: 'food',      name: 'Comida',            color: '#FFEF5350', isDefault: true),
+    Category(id: 'finances',  name: 'Finanzas',          color: '#FF66BB6A', isDefault: true),
+    Category(id: 'trips',     name: 'Viajes',            color: '#FFAB47BC', isDefault: true),
   ];
 
   final List<Category> _defaultCategories$ = List.unmodifiable(_defaultCategories);
@@ -62,9 +62,17 @@ class CategoriesProvider extends ChangeNotifier {
     return [..._defaultCategories$, ..._customCategories];
   }
 
-  List<Category> getSelectedCategories() => getAllCategories()
-      .where((cat) => _selectedCategoryIds.contains(cat.id))
-      .toList();
+  List<Category> getSelectedCategories() {
+    // Busca en TODAS las listas para que funcione aunque el backend haya
+    // reemplazado la lista principal con IDs distintos a los locales
+    final all = [..._defaultCategories$, ..._customCategories, ..._backendCategories];
+    final seen = <String>{};
+    final unique = <Category>[];
+    for (final cat in all) {
+      if (!seen.contains(cat.id)) { seen.add(cat.id); unique.add(cat); }
+    }
+    return unique.where((cat) => _selectedCategoryIds.contains(cat.id)).toList();
+  }
 
   // ── Carga de categorías desde el backend ─────────────────────────────────
   /// Llama a GET /categories y reemplaza la lista local con la del servidor.
@@ -197,41 +205,62 @@ class CategoriesProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final selectedCategories = getSelectedCategories();
-
-      if (selectedCategories.isEmpty) {
+      // Comprobación directa sobre la fuente de verdad
+      if (_selectedCategoryIds.isEmpty) {
         _error = 'Selecciona al menos una categoría';
         _isSyncingCategories = false;
         notifyListeners();
         return false;
       }
 
-      // Enviar cada categoría seleccionada al backend (default y personalizadas)
-      for (final category in selectedCategories) {
+      // Buscar en TODAS las fuentes disponibles para resolver IDs → nombres
+      final allAvailable = [
+        ..._defaultCategories$,
+        ..._customCategories,
+        ..._backendCategories,
+      ];
+
+      final toSync = <Category>[];
+      for (final id in _selectedCategoryIds) {
+        final found = allAvailable.where((c) => c.id == id).firstOrNull;
+        if (found != null) toSync.add(found);
+      }
+
+      if (toSync.isEmpty) {
+        _error = 'No se pudieron resolver las categorías seleccionadas';
+        _isSyncingCategories = false;
+        notifyListeners();
+        return false;
+      }
+
+      // Enviar cada categoría seleccionada al backend
+      for (final category in toSync) {
         try {
           await ApiService.createCategory(category.name);
         } on BadRequestException catch (e) {
-            if (e.message.toLowerCase().contains('duplicada') ||
-                e.message.toLowerCase().contains('existe') ||
-                e.message.toLowerCase().contains('duplicate') ||
-                e.message.toLowerCase().contains('already')) {
-              continue;
-            }
-            _error = e.message;
-            _isSyncingCategories = false;
-            notifyListeners();
-            return false;
-          } on NetworkException catch (e) {
-            _error = e.message;
-            _isSyncingCategories = false;
-            notifyListeners();
-            return false;
-          } on ServerException catch (e) {
-            _error = e.message;
-            _isSyncingCategories = false;
-            notifyListeners();
-            return false;
+          // Ignorar duplicados — la categoría ya existe en el backend
+          if (e.message.toLowerCase().contains('duplicada') ||
+              e.message.toLowerCase().contains('existe') ||
+              e.message.toLowerCase().contains('duplicate') ||
+              e.message.toLowerCase().contains('already') ||
+              e.message.toLowerCase().contains('409')) {
+            continue;
           }
+          _error = e.message;
+          _isSyncingCategories = false;
+          notifyListeners();
+          return false;
+        } on NetworkException catch (e) {
+          _error = e.message;
+          _isSyncingCategories = false;
+          notifyListeners();
+          return false;
+        } on ServerException catch (e) {
+          _error = e.message;
+          _isSyncingCategories = false;
+          notifyListeners();
+          return false;
+        }
       }
 
       _isSyncingCategories = false;

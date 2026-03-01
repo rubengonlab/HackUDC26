@@ -19,6 +19,14 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
   static const _kSurface = Color(0xFF252B5C);
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<CategoriesProvider>().loadFromBackend();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: _kBg,

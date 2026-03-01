@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../models/index.dart';
 import '../../providers/index.dart';
@@ -25,7 +26,7 @@ class _NewNoteSheet extends StatefulWidget {
   State<_NewNoteSheet> createState() => _NewNoteSheetState();
 }
 
-enum _SheetMode { picker, text, audio }
+enum _SheetMode { picker, text, audio, image }
 
 class _NewNoteSheetState extends State<_NewNoteSheet> {
   _SheetMode _mode = _SheetMode.picker;
@@ -41,6 +42,7 @@ class _NewNoteSheetState extends State<_NewNoteSheet> {
             key: const ValueKey('picker'),
             onText: () => setState(() => _mode = _SheetMode.text),
             onAudio: () => setState(() => _mode = _SheetMode.audio),
+            onImage: () => setState(() => _mode = _SheetMode.image),
           ),
         _SheetMode.text => _TextNoteView(
             key: const ValueKey('text'),
@@ -49,6 +51,11 @@ class _NewNoteSheetState extends State<_NewNoteSheet> {
           ),
         _SheetMode.audio => _AudioNoteView(
             key: const ValueKey('audio'),
+            onBack: () => setState(() => _mode = _SheetMode.picker),
+            onSaved: () => Navigator.of(context).pop(),
+          ),
+        _SheetMode.image => _ImageNoteView(
+            key: const ValueKey('image'),
             onBack: () => setState(() => _mode = _SheetMode.picker),
             onSaved: () => Navigator.of(context).pop(),
           ),
@@ -61,9 +68,15 @@ class _NewNoteSheetState extends State<_NewNoteSheet> {
 // Vista 1: selector de tipo
 // ─────────────────────────────────────────────────────────────────────────────
 class _PickerView extends StatelessWidget {
-  const _PickerView({super.key, required this.onText, required this.onAudio});
+  const _PickerView({
+    super.key,
+    required this.onText,
+    required this.onAudio,
+    required this.onImage,
+  });
   final VoidCallback onText;
   final VoidCallback onAudio;
+  final VoidCallback onImage;
 
   static const _kBg = Color(0xFF1A1F4D);
   static const _kPrimary = Color(0xFFFF5856);
@@ -107,7 +120,7 @@ class _PickerView extends StatelessWidget {
                   onTap: onText,
                 ),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 12),
               Expanded(
                 child: _TypeButton(
                   emoji: '🎙️',
@@ -115,6 +128,16 @@ class _PickerView extends StatelessWidget {
                   sublabel: 'Audio',
                   color: _kPrimary,
                   onTap: onAudio,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _TypeButton(
+                  emoji: '🖼️',
+                  label: 'Imagen',
+                  sublabel: 'Foto o galería',
+                  color: const Color(0xFF56C288),
+                  onTap: onImage,
                 ),
               ),
             ],
@@ -146,7 +169,7 @@ class _TypeButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: const Color(0xFF252B5C),
           borderRadius: BorderRadius.circular(18),
@@ -155,23 +178,24 @@ class _TypeButton extends StatelessWidget {
         child: Column(
           children: [
             Container(
-              width: 52, height: 52,
+              width: 48, height: 48,
               decoration: BoxDecoration(
                 color: color.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(13),
               ),
-              child: Center(child: Text(emoji, style: const TextStyle(fontSize: 26))),
+              child: Center(child: Text(emoji, style: const TextStyle(fontSize: 24))),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
             Text(label,
                 style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.w700,
-                    fontSize: 15)),
+                    fontSize: 13)),
             const SizedBox(height: 2),
             Text(sublabel,
                 style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.45), fontSize: 12)),
+                    color: Colors.white.withValues(alpha: 0.45), fontSize: 11),
+                textAlign: TextAlign.center),
           ],
         ),
       ),
@@ -244,9 +268,7 @@ class _TextNoteViewState extends State<_TextNoteView> {
   Widget build(BuildContext context) {
     final categories = context.watch<CategoriesProvider>().getAllCategories();
     return Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-      ),
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: Container(
         decoration: const BoxDecoration(
           color: _kBg,
@@ -353,8 +375,7 @@ class _TextNoteViewState extends State<_TextNoteView> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Vista 3: grabación de audio
-// Usa MethodChannel para invocar la grabación nativa de Android
+// Vista 3: grabación de audio con paquete record
 // ─────────────────────────────────────────────────────────────────────────────
 class _AudioNoteView extends StatefulWidget {
   const _AudioNoteView({super.key, required this.onBack, required this.onSaved});
@@ -370,7 +391,6 @@ class _AudioNoteViewState extends State<_AudioNoteView> {
   static const _kBg = Color(0xFF1A1F4D);
   static const _kPrimary = Color(0xFFFF5856);
 
-  // Canal nativo para grabación
   static const _channel = MethodChannel('com.junkdrawer/audio_recorder');
 
   _RecordState _state = _RecordState.idle;
@@ -383,7 +403,6 @@ class _AudioNoteViewState extends State<_AudioNoteView> {
   @override
   void dispose() {
     _timer?.cancel();
-    // Aseguramos parar la grabación si se destruye el widget
     if (_state == _RecordState.recording) {
       _channel.invokeMethod('stop').catchError((_) {});
     }
@@ -393,9 +412,8 @@ class _AudioNoteViewState extends State<_AudioNoteView> {
   Future<void> _startRecording() async {
     setState(() => _error = null);
     try {
-      // Solicita permiso e inicia grabación via canal nativo
       final path = await _channel.invokeMethod<String>('start');
-      if (path == null) {
+      if (path == null || path.isEmpty) {
         setState(() => _error = 'No se pudo iniciar la grabación.');
         return;
       }
@@ -407,7 +425,7 @@ class _AudioNoteViewState extends State<_AudioNoteView> {
     } on PlatformException catch (e) {
       setState(() => _error = _mapPlatformError(e));
     } catch (e) {
-      setState(() => _error = 'No se pudo iniciar la grabación. Inténtalo de nuevo.');
+      setState(() => _error = 'No se pudo iniciar la grabación: ${e.toString()}');
     }
   }
 
@@ -415,20 +433,15 @@ class _AudioNoteViewState extends State<_AudioNoteView> {
     _timer?.cancel();
     try {
       final path = await _channel.invokeMethod<String>('stop');
-      setState(() {
-        _recordedPath = path;
-        _state = _RecordState.recorded;
-      });
+      if (path == null || path.isEmpty) {
+        setState(() { _state = _RecordState.idle; _error = 'No se guardó el audio.'; });
+        return;
+      }
+      setState(() { _recordedPath = path; _state = _RecordState.recorded; });
     } on PlatformException catch (e) {
-      setState(() {
-        _state = _RecordState.idle;
-        _error = _mapPlatformError(e);
-      });
+      setState(() { _state = _RecordState.idle; _error = _mapPlatformError(e); });
     } catch (e) {
-      setState(() {
-        _state = _RecordState.idle;
-        _error = 'Error al detener la grabación.';
-      });
+      setState(() { _state = _RecordState.idle; _error = 'Error al detener la grabación.'; });
     }
   }
 
@@ -449,10 +462,7 @@ class _AudioNoteViewState extends State<_AudioNoteView> {
     setState(() { _state = _RecordState.uploading; _error = null; });
     try {
       final catId = int.tryParse(_selectedCategoryId ?? '');
-      await ApiService.createAudio(
-        audioFile: File(_recordedPath!),
-        categoryId: catId,
-      );
+      await ApiService.createAudio(audioFile: File(_recordedPath!), categoryId: catId);
       if (ctx.mounted) ctx.read<NotesProvider>().loadNotes();
       widget.onSaved();
     } on BadRequestException catch (e) {
@@ -464,23 +474,15 @@ class _AudioNoteViewState extends State<_AudioNoteView> {
     } on ServerException catch (e) {
       setState(() { _error = e.message; _state = _RecordState.recorded; });
     } catch (e) {
-      setState(() {
-        _error = 'Error inesperado. Inténtalo de nuevo.';
-        _state = _RecordState.recorded;
-      });
+      setState(() { _error = 'Error inesperado. Inténtalo de nuevo.'; _state = _RecordState.recorded; });
     }
   }
 
   String _mapPlatformError(PlatformException e) {
     switch (e.code) {
-      case 'PERMISSION_DENIED':
-        return 'Se necesita permiso de micrófono. Actívalo en Ajustes.';
-      case 'PERMISSION_PERMANENTLY_DENIED':
-        return 'Permiso de micrófono denegado permanentemente. Ve a Ajustes del sistema.';
-      case 'RECORDER_ERROR':
-        return 'Error del grabador: ${e.message}';
-      default:
-        return e.message ?? 'Error desconocido al grabar.';
+      case 'PERMISSION_DENIED': return 'Se necesita permiso de micrófono. Actívalo en Ajustes.';
+      case 'RECORDER_ERROR': return 'Error del grabador: ${e.message}';
+      default: return e.message ?? 'Error desconocido al grabar.';
     }
   }
 
@@ -504,7 +506,8 @@ class _AudioNoteViewState extends State<_AudioNoteView> {
       ),
       padding: EdgeInsets.fromLTRB(
           20, 12, 20,
-          24 + MediaQuery.of(context).viewInsets.bottom + MediaQuery.of(context).padding.bottom),
+          24 + MediaQuery.of(context).viewInsets.bottom +
+              MediaQuery.of(context).padding.bottom),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -688,6 +691,255 @@ class _AudioNoteViewState extends State<_AudioNoteView> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Vista 4: subida de imagen (cámara o galería)
+// ─────────────────────────────────────────────────────────────────────────────
+class _ImageNoteView extends StatefulWidget {
+  const _ImageNoteView({super.key, required this.onBack, required this.onSaved});
+  final VoidCallback onBack;
+  final VoidCallback onSaved;
+  @override
+  State<_ImageNoteView> createState() => _ImageNoteViewState();
+}
+
+class _ImageNoteViewState extends State<_ImageNoteView> {
+  static const _kBg = Color(0xFF1A1F4D);
+  static const _kGreen = Color(0xFF56C288);
+
+  File? _pickedFile;
+  final _contextCtrl = TextEditingController();
+  bool _uploading = false;
+  String? _error;
+
+  final _picker = ImagePicker();
+
+  @override
+  void dispose() {
+    _contextCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickImage(ImageSource source) async {
+    setState(() => _error = null);
+    try {
+      final xfile = await _picker.pickImage(
+        source: source,
+        imageQuality: 85,
+        maxWidth: 1920,
+      );
+      if (xfile != null) {
+        setState(() => _pickedFile = File(xfile.path));
+      }
+    } catch (e) {
+      setState(() => _error =
+          'No se pudo acceder a ${source == ImageSource.camera ? 'la cámara' : 'la galería'}: ${e.toString()}');
+    }
+  }
+
+  Future<void> _upload(BuildContext ctx) async {
+    if (_pickedFile == null) return;
+    setState(() { _uploading = true; _error = null; });
+    try {
+      await ApiService.createImage(
+        imageFile: _pickedFile!,
+        contextText: _contextCtrl.text.trim().isEmpty
+            ? null
+            : _contextCtrl.text.trim(),
+      );
+      if (ctx.mounted) ctx.read<NotesProvider>().loadNotes();
+      widget.onSaved();
+    } on BadRequestException catch (e) {
+      setState(() { _error = e.message; _uploading = false; });
+    } on NetworkException catch (e) {
+      setState(() { _error = e.message; _uploading = false; });
+    } on ServerException catch (e) {
+      setState(() { _error = e.message; _uploading = false; });
+    } catch (e) {
+      setState(() { _error = 'Error inesperado. Inténtalo de nuevo.'; _uploading = false; });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: Container(
+        decoration: const BoxDecoration(
+          color: _kBg,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: EdgeInsets.fromLTRB(
+          20, 12, 20,
+          24 + MediaQuery.of(context).padding.bottom,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40, height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                GestureDetector(
+                  onTap: _uploading ? null : widget.onBack,
+                  child: Icon(Icons.arrow_back_ios_new_rounded,
+                      color: Colors.white.withValues(alpha: 0.6), size: 20),
+                ),
+                const SizedBox(width: 12),
+                const Text('Nota de imagen',
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700)),
+              ],
+            ),
+            const SizedBox(height: 20),
+
+            // Área de previsualización o selector
+            if (_pickedFile == null)
+              Row(
+                children: [
+                  Expanded(
+                    child: _ImageSourceButton(
+                      icon: Icons.camera_alt_rounded,
+                      label: 'Cámara',
+                      color: _kGreen,
+                      onTap: () => _pickImage(ImageSource.camera),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _ImageSourceButton(
+                      icon: Icons.photo_library_rounded,
+                      label: 'Galería',
+                      color: const Color(0xFF4C9FE0),
+                      onTap: () => _pickImage(ImageSource.gallery),
+                    ),
+                  ),
+                ],
+              )
+            else
+              Stack(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: Image.file(
+                      _pickedFile!,
+                      width: double.infinity,
+                      height: 200,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                  Positioned(
+                    top: 8, right: 8,
+                    child: GestureDetector(
+                      onTap: _uploading
+                          ? null
+                          : () => setState(() => _pickedFile = null),
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: Colors.black54,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Icon(Icons.close_rounded,
+                            color: Colors.white, size: 18),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
+            const SizedBox(height: 14),
+            _InputField(
+              controller: _contextCtrl,
+              hint: 'Descripción o contexto (opcional)',
+              maxLines: 2,
+            ),
+            if (_error != null) ...[
+              const SizedBox(height: 12),
+              _ErrorBanner(message: _error!),
+            ],
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed:
+                    _pickedFile != null && !_uploading ? () => _upload(context) : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _kGreen,
+                  disabledBackgroundColor: _kGreen.withValues(alpha: 0.25),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14)),
+                  elevation: 0,
+                ),
+                child: _uploading
+                    ? const SizedBox(
+                        width: 22, height: 22,
+                        child: CircularProgressIndicator(
+                            color: Colors.white, strokeWidth: 2.5))
+                    : const Text('Guardar imagen',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 15)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ImageSourceButton extends StatelessWidget {
+  const _ImageSourceButton({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 28),
+        decoration: BoxDecoration(
+          color: const Color(0xFF252B5C),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: color.withValues(alpha: 0.3), width: 1.5),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: color, size: 36),
+            const SizedBox(height: 8),
+            Text(label,
+                style: TextStyle(
+                    color: color,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14)),
+          ],
+        ),
       ),
     );
   }
@@ -923,9 +1175,4 @@ class _WaveBarState extends State<_WaveBar>
     );
   }
 }
-
-
-
-
-
 

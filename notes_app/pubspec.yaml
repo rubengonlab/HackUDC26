@@ -16,6 +16,15 @@ dependencies:
   shared_preferences: ^2.2.2
   flutter_launcher_icons: ^0.14.4
   http: ^1.1.0
+  image_picker: ^1.1.2
+  path_provider: ^2.1.4
+
+# Bloquear versiones de sub-paquetes iOS/macOS que arrastran objective_c
+# con native hooks (hook/build.dart) → causan error "Android NDK not found"
+dependency_overrides:
+  path_provider_foundation: 2.3.2
+  image_picker_ios: 0.8.9+1
+  shared_preferences_foundation: 2.4.0
 
 dev_dependencies:
   flutter_test:

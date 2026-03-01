@@ -78,6 +78,67 @@ class Note {
     );
   }
 
+  /// Construye un Note desde CaptureDto (GET /captures)
+  factory Note.fromCaptureJson(Map<String, dynamic> json) {
+    final captureType = (json['captureType'] as String? ?? 'NOTE').toUpperCase();
+    final NoteType type;
+    String title;
+    String? preview;
+
+    switch (captureType) {
+      case 'AUDIO':
+        type = NoteType.audio;
+        final audio = json['audio'] as Map<String, dynamic>?;
+        title = json['title'] as String? ??
+            audio?['originalFileName'] as String? ??
+            'Audio';
+        preview = audio?['parsedText'] as String?;
+        break;
+      case 'IMAGE':
+        type = NoteType.image;
+        final image = json['image'] as Map<String, dynamic>?;
+        title = json['title'] as String? ??
+            image?['originalFileName'] as String? ??
+            'Imagen';
+        preview = json['contextText'] as String?;
+        break;
+      case 'LINK':
+        type = NoteType.link;
+        final link = json['link'] as Map<String, dynamic>?;
+        title = json['title'] as String? ??
+            link?['url'] as String? ??
+            json['origin'] as String? ??
+            'Enlace';
+        preview = link?['url'] as String?;
+        break;
+      case 'DOCUMENT':
+        type = NoteType.image; // reuse image icon for now
+        final doc = json['document'] as Map<String, dynamic>?;
+        title = json['title'] as String? ??
+            doc?['originalFileName'] as String? ??
+            'Documento';
+        preview = json['contextText'] as String?;
+        break;
+      default: // NOTE
+        type = NoteType.text;
+        final note = json['note'] as Map<String, dynamic>?;
+        title = json['title'] as String? ??
+            (note?['content'] as String? ?? '').split('\n').first;
+        if (title.isEmpty) title = 'Nota';
+        preview = note?['content'] as String?;
+    }
+
+    return Note(
+      id: 'cap_${json['id']}',
+      title: title,
+      preview: preview,
+      type: type,
+      categoryId: json['categoryId']?.toString(),
+      createdAt: DateTime.tryParse(json['createdAt'] ?? '') ?? DateTime.now(),
+      categoryStatus: _parseStatus(json['categoryStatus']),
+    );
+  }
+
   static CategoryStatus _parseStatus(String? s) {
     switch (s) {
       case 'PENDING':

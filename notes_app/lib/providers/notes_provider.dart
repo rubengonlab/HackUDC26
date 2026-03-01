@@ -1,17 +1,42 @@
 ﻿import 'package:flutter/material.dart';
 import '../models/index.dart';
 import '../services/index.dart';
+
 enum GroupBy { category, type, date }
+
 class NotesProvider extends ChangeNotifier {
   List<Note> _notes = [];
   bool _isLoading = false;
   String? _error;
   final List<GroupBy> _groupingOrder = [GroupBy.category];
+
+  // Filtros activos
+  String? _activeFileType;   // NOTE, LINK, AUDIO, IMAGE, DOCUMENT — null = todos
+  int? _activeCategoryId;    // null = todas
+  String? _activeDate;       // yyyy-MM-dd — null = todas
+
+  // Tipos y fechas disponibles (cargados desde el back)
+  List<String> _availableTypes = [];
+  List<String> _availableDays = [];
+  bool _isLoadingFilters = false;
+
+  // ── Getters ──────────────────────────────────────────────────────────────
   List<Note> get allNotes => List.unmodifiable(_notes);
   bool get isLoading => _isLoading;
   String? get error => _error;
   List<GroupBy> get groupingOrder => List.unmodifiable(_groupingOrder);
   Set<GroupBy> get activeGroupings => _groupingOrder.toSet();
+
+  String? get activeFileType => _activeFileType;
+  int? get activeCategoryId => _activeCategoryId;
+  String? get activeDate => _activeDate;
+  List<String> get availableTypes => List.unmodifiable(_availableTypes);
+  List<String> get availableDays => List.unmodifiable(_availableDays);
+  bool get isLoadingFilters => _isLoadingFilters;
+  bool get hasActiveFilters =>
+      _activeFileType != null || _activeCategoryId != null || _activeDate != null;
+
+  // ── Agrupación ────────────────────────────────────────────────────────────
   void toggleGrouping(GroupBy g) {
     if (_groupingOrder.contains(g)) {
       if (_groupingOrder.length > 1) _groupingOrder.remove(g);
@@ -20,15 +45,46 @@ class NotesProvider extends ChangeNotifier {
     }
     notifyListeners();
   }
+
+  // ── Filtros ───────────────────────────────────────────────────────────────
+  void setFileTypeFilter(String? fileType) {
+    _activeFileType = fileType;
+    loadNotes();
+  }
+
+  void setCategoryFilter(int? categoryId) {
+    _activeCategoryId = categoryId;
+    loadNotes();
+  }
+
+  void setDateFilter(String? date) {
+    _activeDate = date;
+    loadNotes();
+  }
+
+  void clearFilters() {
+    _activeFileType = null;
+    _activeCategoryId = null;
+    _activeDate = null;
+    loadNotes();
+  }
+
+  // ── Carga principal desde /captures ──────────────────────────────────────
   Future<void> loadNotes() async {
     _isLoading = true;
     _error = null;
     notifyListeners();
     try {
-      final result = await ApiService.getAudios(page: 0, size: 200);
+      final result = await ApiService.getCaptures(
+        date: _activeDate,
+        categoryId: _activeCategoryId,
+        fileType: _activeFileType,
+        page: 0,
+        size: 200,
+      );
       final items = result['items'] as List<dynamic>? ?? [];
       _notes = items
-          .map((e) => Note.fromAudioJson(e as Map<String, dynamic>))
+          .map((e) => Note.fromCaptureJson(e as Map<String, dynamic>))
           .toList();
       _error = null;
     } catch (e) {
@@ -38,9 +94,33 @@ class NotesProvider extends ChangeNotifier {
       notifyListeners();
     }
   }
+
+  // ── Carga de metadatos de filtros (tipos usados + días disponibles) ───────
+  Future<void> loadFilterMetadata() async {
+    _isLoadingFilters = true;
+    notifyListeners();
+    try {
+      final results = await Future.wait([
+        ApiService.getUsedCaptureTypes(),
+        ApiService.getCaptureDays(page: 0, size: 60),
+      ]);
+      _availableTypes = results[0] as List<String>;
+      final daysResult = results[1] as Map<String, dynamic>;
+      final rawDays = daysResult['items'] as List<dynamic>? ?? [];
+      _availableDays = rawDays.map((d) => d.toString()).toList();
+    } catch (_) {
+      // Silencioso: si falla, simplemente no hay filtros de metadatos
+    } finally {
+      _isLoadingFilters = false;
+      notifyListeners();
+    }
+  }
+
+  // ── Árbol de carpetas ─────────────────────────────────────────────────────
   List<FolderNode> buildFolderTree(List<Category> userCategories) {
     return _buildLevel(_notes, _groupingOrder, 0, userCategories);
   }
+
   List<FolderNode> _buildLevel(
     List<Note> notes,
     List<GroupBy> order,
@@ -68,6 +148,7 @@ class NotesProvider extends ChangeNotifier {
     }).toList()
       ..sort((a, b) => a.label.compareTo(b.label));
   }
+
   String _keyFor(Note note, GroupBy g) {
     switch (g) {
       case GroupBy.category:
@@ -79,23 +160,27 @@ class NotesProvider extends ChangeNotifier {
         return '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
     }
   }
+
   String _labelFor(String key, GroupBy g, List<Category> cats) {
     switch (g) {
       case GroupBy.category:
-        if (key == '_uncategorized') return 'Sin categoria';
+        if (key == '_uncategorized') return 'Sin categoría';
         try {
           return cats.firstWhere((c) => c.id == key).name;
         } catch (_) {
           return key;
         }
       case GroupBy.type:
-        final type = NoteType.values.firstWhere(
-          (t) => t.name == key,
-          orElse: () => NoteType.text,
-        );
-        return '${Note.typeEmoji(type)} ${Note.typeLabel(type)}';
+        const labels = {
+          'audio': '🎙️ Audio',
+          'text': '📝 Texto',
+          'image': '🖼️ Imagen',
+          'link': '🔗 Enlace',
+        };
+        return labels[key] ?? key;
       case GroupBy.date:
         final parts = key.split('-');
+        if (parts.length < 3) return key;
         final d = DateTime(
           int.parse(parts[0]),
           int.parse(parts[1]),
@@ -104,6 +189,7 @@ class NotesProvider extends ChangeNotifier {
         return _formatDateLabel(d);
     }
   }
+
   String _formatDateLabel(DateTime d) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
@@ -111,13 +197,14 @@ class NotesProvider extends ChangeNotifier {
     final diff = today.difference(day).inDays;
     if (diff == 0) return 'Hoy';
     if (diff == 1) return 'Ayer';
-    if (diff < 7) return 'Hace $diff dias';
+    if (diff < 7) return 'Hace $diff días';
     const months = [
       '', 'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
       'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'
     ];
     return '${d.day} ${months[d.month]} ${d.year}';
   }
+
   Color? _colorFor(String key, GroupBy g, List<Category> cats) {
     if (g != GroupBy.category) return null;
     if (key == '_uncategorized') return const Color(0xFF6B7280);
@@ -127,6 +214,7 @@ class NotesProvider extends ChangeNotifier {
       return null;
     }
   }
+
   Color _parseColor(String colorString) {
     final hex = colorString.replaceAll('#', '');
     if (hex.length == 8) return Color(int.parse(hex, radix: 16));
@@ -134,6 +222,7 @@ class NotesProvider extends ChangeNotifier {
     return const Color(0xFFFF5856);
   }
 }
+
 class FolderNode {
   final String key;
   final String label;
