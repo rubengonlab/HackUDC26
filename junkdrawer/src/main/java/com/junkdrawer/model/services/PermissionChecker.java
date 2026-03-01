@@ -4,6 +4,7 @@ import com.junkdrawer.model.common.InstanceNotFoundException;
 import com.junkdrawer.model.entities.Audio;
 import com.junkdrawer.model.entities.Capture;
 import com.junkdrawer.model.entities.Category;
+import com.junkdrawer.model.entities.Document;
 import com.junkdrawer.model.entities.Image;
 import com.junkdrawer.model.entities.Note;
 
@@ -18,4 +19,6 @@ public interface PermissionChecker {
     Audio checkAudioExists(Long audioId) throws InstanceNotFoundException;
 
     Image checkImageExists(Long imageId) throws InstanceNotFoundException;
+
+    Document checkDocumentExists(Long documentId) throws InstanceNotFoundException;
 }

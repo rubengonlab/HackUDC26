@@ -10,11 +10,13 @@ import com.junkdrawer.model.common.InstanceNotFoundException;
 import com.junkdrawer.model.daos.AudioDao;
 import com.junkdrawer.model.daos.CaptureDao;
 import com.junkdrawer.model.daos.CategoryDao;
+import com.junkdrawer.model.daos.DocumentDao;
 import com.junkdrawer.model.daos.ImageDao;
 import com.junkdrawer.model.daos.NoteDao;
 import com.junkdrawer.model.entities.Audio;
 import com.junkdrawer.model.entities.Capture;
 import com.junkdrawer.model.entities.Category;
+import com.junkdrawer.model.entities.Document;
 import com.junkdrawer.model.entities.Image;
 import com.junkdrawer.model.entities.Note;
 
@@ -36,6 +38,9 @@ public class PermissionCheckerImpl implements PermissionChecker {
 
     @Autowired
     private ImageDao imageDao;
+
+    @Autowired
+    private DocumentDao documentDao;
 
     @Override
     public Category checkCategoryExists(Long categoryId) throws InstanceNotFoundException {
@@ -87,6 +92,17 @@ public class PermissionCheckerImpl implements PermissionChecker {
 
         if (!optional.isPresent()) {
             throw new InstanceNotFoundException("project.entities.image", imageId);
+        }
+
+        return optional.get();
+    }
+
+    @Override
+    public Document checkDocumentExists(Long documentId) throws InstanceNotFoundException {
+        Optional<Document> optional = documentDao.findById(documentId);
+
+        if (!optional.isPresent()) {
+            throw new InstanceNotFoundException("project.entities.document", documentId);
         }
 
         return optional.get();

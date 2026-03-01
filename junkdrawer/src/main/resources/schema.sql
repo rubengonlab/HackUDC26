@@ -75,6 +75,9 @@ CREATE TABLE Document (
     mimeType VARCHAR(100) NOT NULL,
     size BIGINT NOT NULL,
     storagePath VARCHAR(500) NOT NULL,
+    parsedText CLOB NULL,
+    reorderedParsedText CLOB NULL,
+    textStatus VARCHAR(30) NOT NULL DEFAULT 'PENDING',
     captureId BIGINT NOT NULL UNIQUE,
     FOREIGN KEY (captureId) REFERENCES Capture(id) ON DELETE CASCADE
 );

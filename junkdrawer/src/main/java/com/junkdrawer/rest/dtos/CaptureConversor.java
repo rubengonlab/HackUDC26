@@ -103,6 +103,9 @@ public class CaptureConversor {
         dto.setMimeType(document.getMimeType());
         dto.setSize(document.getSize());
         dto.setStoragePath(document.getStoragePath());
+        dto.setParsedText(document.getParsedText());
+        dto.setReorderedParsedText(document.getReorderedParsedText());
+        dto.setTextStatus(document.getTextStatus() != null ? document.getTextStatus().name() : null);
         return dto;
     }
 }
