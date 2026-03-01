@@ -1,6 +1,7 @@
 package com.hackudc.kelea_notes
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.media.MediaRecorder
 import android.os.Build
@@ -14,15 +15,21 @@ import java.io.File
 class MainActivity : FlutterActivity() {
 
     private val CHANNEL = "com.junkdrawer/audio_recorder"
+    private val SHARE_CHANNEL = "com.junkdrawer/share_handler"
     private val MIC_PERMISSION_CODE = 101
 
     private var recorder: MediaRecorder? = null
     private var currentPath: String? = null
     private var pendingResult: MethodChannel.Result? = null
 
+    // Guardamos el enlace recibido hasta que Flutter esté listo para recibirlo
+    private var pendingSharedUrl: String? = null
+    private var shareMethodChannel: MethodChannel? = null
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
 
+        // Canal grabación de audio
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL)
             .setMethodCallHandler { call, result ->
                 when (call.method) {
@@ -31,6 +38,44 @@ class MainActivity : FlutterActivity() {
                     else    -> result.notImplemented()
                 }
             }
+
+        // Canal de share: Flutter llama a "getSharedUrl" para obtener la URL pendiente
+        shareMethodChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, SHARE_CHANNEL)
+        shareMethodChannel!!.setMethodCallHandler { call, result ->
+            when (call.method) {
+                "getSharedUrl" -> {
+                    result.success(pendingSharedUrl)
+                    pendingSharedUrl = null
+                }
+                else -> result.notImplemented()
+            }
+        }
+
+        // Si la app se abrió directamente desde un Share Intent, procesarlo ahora
+        handleShareIntent(intent)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        // La app ya estaba abierta (singleTop) y llega un nuevo intent de share
+        handleShareIntent(intent)
+        // Notificar a Flutter inmediatamente si el canal ya está listo
+        val url = pendingSharedUrl
+        if (url != null) {
+            shareMethodChannel?.invokeMethod("onSharedUrl", url)
+            pendingSharedUrl = null
+        }
+    }
+
+    private fun handleShareIntent(intent: Intent?) {
+        if (intent?.action == Intent.ACTION_SEND &&
+            intent.type?.startsWith("text/") == true
+        ) {
+            val sharedText = intent.getStringExtra(Intent.EXTRA_TEXT)
+            if (!sharedText.isNullOrBlank()) {
+                pendingSharedUrl = sharedText
+            }
+        }
     }
 
     private fun startRecording(result: MethodChannel.Result) {
