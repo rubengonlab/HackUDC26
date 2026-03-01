@@ -1,0 +1,49 @@
+name: kelea_notes
+description: "Aplicación de gestión de notas con clasificación por categorías"
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.10.8
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  provider: ^6.1.0
+  go_router: ^13.0.0
+  shared_preferences: ^2.2.2
+  flutter_launcher_icons: ^0.14.4
+  http: ^1.1.0
+  http_parser: ^4.0.2
+  image_picker: ^1.1.2
+  path_provider: ^2.1.4
+  file_picker: ^10.3.10
+
+# Bloquear versiones de sub-paquetes iOS/macOS que arrastran objective_c
+# con native hooks (hook/build.dart) → causan error "Android NDK not found"
+dependency_overrides:
+  path_provider_foundation: 2.3.2
+  image_picker_ios: 0.8.9+1
+  shared_preferences_foundation: 2.4.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^6.0.0
+
+flutter_launcher_icons:
+  android: "ic_launcher"
+  ios: false
+  image_path: "assets/images/AppIcon.jpeg"
+  adaptive_icon_background: "#1A1F4D"
+  adaptive_icon_foreground: "assets/images/AppIcon.jpeg"
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/LoginIcon.png
+    - assets/images/AppIcon.jpeg
+

@@ -1,0 +1,93 @@
+-- SPDX-FileCopyrightText: Copyright (c) 2026 Rubén González Laballós
+-- SPDX-License-Identifier: MIT
+
+DROP TABLE IF EXISTS Document;
+DROP TABLE IF EXISTS Image;
+DROP TABLE IF EXISTS Audio;
+DROP TABLE IF EXISTS Link;
+DROP TABLE IF EXISTS Note;
+DROP TABLE IF EXISTS Capture;
+DROP TABLE IF EXISTS Category;
+
+CREATE TABLE Category (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL
+);
+
+CREATE TABLE Capture (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    createdAt TIMESTAMP NOT NULL,
+    captureType VARCHAR(30) NOT NULL,
+    categoryStatus VARCHAR(30) NOT NULL DEFAULT 'UNCATEGORIZED',
+    title VARCHAR(200),
+    contextText CLOB,
+    origin VARCHAR(30),
+    categoryId BIGINT,
+    FOREIGN KEY (categoryId) REFERENCES Category(id) ON DELETE SET NULL
+);
+
+CREATE TABLE Note (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    content CLOB NOT NULL,
+    reorderedText CLOB NULL,
+    textStatus VARCHAR(30) NOT NULL DEFAULT 'PENDING',
+    captureId BIGINT NOT NULL UNIQUE,
+    FOREIGN KEY (captureId) REFERENCES Capture(id) ON DELETE CASCADE
+);
+
+CREATE TABLE Link (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    url VARCHAR(2048) NOT NULL UNIQUE,
+    origin VARCHAR(30),
+    captureId BIGINT NOT NULL UNIQUE,
+    FOREIGN KEY (captureId) REFERENCES Capture(id) ON DELETE CASCADE
+);
+
+CREATE TABLE Audio (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    fileName VARCHAR(255) NOT NULL,
+    originalFileName VARCHAR(255) NOT NULL,
+    mimeType VARCHAR(100) NOT NULL,
+    size BIGINT NOT NULL,
+    storagePath VARCHAR(500) NOT NULL,
+    parsedText CLOB NULL,
+    reorderedParsedText CLOB NULL,
+    textStatus VARCHAR(30) NOT NULL DEFAULT 'PENDING',
+    captureId BIGINT NOT NULL UNIQUE,
+    FOREIGN KEY (captureId) REFERENCES Capture(id) ON DELETE CASCADE
+);
+
+CREATE TABLE Image (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    fileName VARCHAR(255) NOT NULL,
+    originalFileName VARCHAR(255) NOT NULL,
+    mimeType VARCHAR(100) NOT NULL,
+    size BIGINT NOT NULL,
+    storagePath VARCHAR(500) NOT NULL,
+    parsedText CLOB NULL,
+    reorderedParsedText CLOB NULL,
+    textStatus VARCHAR(30) NOT NULL DEFAULT 'PENDING',
+    captureId BIGINT NOT NULL UNIQUE,
+    FOREIGN KEY (captureId) REFERENCES Capture(id) ON DELETE CASCADE
+);
+
+CREATE TABLE Document (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    fileName VARCHAR(255) NOT NULL,
+    originalFileName VARCHAR(255) NOT NULL,
+    mimeType VARCHAR(100) NOT NULL,
+    size BIGINT NOT NULL,
+    storagePath VARCHAR(500) NOT NULL,
+    parsedText CLOB NULL,
+    reorderedParsedText CLOB NULL,
+    textStatus VARCHAR(30) NOT NULL DEFAULT 'PENDING',
+    captureId BIGINT NOT NULL UNIQUE,
+    FOREIGN KEY (captureId) REFERENCES Capture(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_capture_category_id ON Capture(categoryId);
+CREATE INDEX idx_note_capture_id ON Note(captureId);
+CREATE INDEX idx_link_capture_id ON Link(captureId);
+CREATE INDEX idx_audio_capture_id ON Audio(captureId);
+CREATE INDEX idx_image_capture_id ON Image(captureId);
+CREATE INDEX idx_document_capture_id ON Document(captureId);
