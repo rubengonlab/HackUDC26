@@ -1,4 +1,5 @@
 ﻿import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 import 'dart:async' show TimeoutException;
 import 'dart:convert';
 import 'dart:io';
@@ -85,7 +86,12 @@ class ApiService {
   }) async {
     try {
       final request = http.MultipartRequest('POST', Uri.parse('$_baseUrl/audio'));
-      request.files.add(await http.MultipartFile.fromPath('file', audioFile.path));
+      final audioMime = _mimeTypeFromPath(audioFile.path, defaultMime: 'audio/m4a');
+      request.files.add(await http.MultipartFile.fromPath(
+        'file',
+        audioFile.path,
+        contentType: MediaType.parse(audioMime),
+      ));
       if (categoryId != null) request.fields['categoryId'] = categoryId.toString();
       if (contextText != null && contextText.isNotEmpty) request.fields['contextText'] = contextText;
       final streamed = await request.send().timeout(_kTimeoutAudio);
@@ -112,7 +118,12 @@ class ApiService {
   }) async {
     try {
       final request = http.MultipartRequest('POST', Uri.parse('$_baseUrl/image'));
-      request.files.add(await http.MultipartFile.fromPath('file', imageFile.path));
+      final imageMime = _mimeTypeFromPath(imageFile.path, defaultMime: 'image/jpeg');
+      request.files.add(await http.MultipartFile.fromPath(
+        'file',
+        imageFile.path,
+        contentType: MediaType.parse(imageMime),
+      ));
       if (contextText != null && contextText.isNotEmpty) request.fields['contextText'] = contextText;
       final streamed = await request.send().timeout(_kTimeoutAudio);
       final response = await http.Response.fromStream(streamed);
@@ -218,6 +229,46 @@ class ApiService {
     } on http.ClientException catch (e) { throw NetworkException('Sin conexión. (${e.message})');
     } on NotFoundException { rethrow; } on ServerException { rethrow;
     } catch (e) { throw NetworkException('Error inesperado: ${e.toString()}'); }
+  }
+  // Utilidad: infiere MIME type desde la extensión del archivo
+  static String _mimeTypeFromPath(String path, {required String defaultMime}) {
+    final ext = path.toLowerCase().split('.').last;
+    switch (ext) {
+      // Imágenes
+      case 'jpg':
+      case 'jpeg':
+        return 'image/jpeg';
+      case 'png':
+        return 'image/png';
+      case 'gif':
+        return 'image/gif';
+      case 'webp':
+        return 'image/webp';
+      case 'bmp':
+        return 'image/bmp';
+      case 'heic':
+      case 'heif':
+        return 'image/heic';
+      // Audio
+      case 'm4a':
+        return 'audio/m4a';
+      case 'mp4':
+        return 'audio/mp4';
+      case 'aac':
+        return 'audio/aac';
+      case 'mp3':
+        return 'audio/mpeg';
+      case 'wav':
+        return 'audio/wav';
+      case 'ogg':
+        return 'audio/ogg';
+      case 'flac':
+        return 'audio/flac';
+      case '3gp':
+        return 'audio/3gpp';
+      default:
+        return defaultMime;
+    }
   }
 }
 // Excepciones personalizadas
