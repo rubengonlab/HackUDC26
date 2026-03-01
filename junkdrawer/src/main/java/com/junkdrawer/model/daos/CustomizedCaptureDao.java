@@ -13,6 +13,8 @@ public interface CustomizedCaptureDao {
     Slice<Capture> getCaptures(LocalDateTime createdFrom, LocalDateTime createdToExclusive, Long categoryId,
             Capture.CaptureType captureType, int page, int size);
 
+    Slice<Capture> getCapturesByCategoryStatus(Capture.CategoryStatus categoryStatus, int page, int size);
+
     List<Capture.CaptureType> getUsedCaptureTypes();
 
     Slice<LocalDate> getCaptureDays(int page, int size);

@@ -82,6 +82,20 @@ public class CaptureController {
         return new BlockDto<>(days.getItems(), days.getExistMoreItems());
     }
 
+    @Operation(summary = "Listar capturas con categoría pendiente",
+            description = "Devuelve las capturas cuyo estado de categoría está pendiente de aprobación.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Listado paginado de pendientes")
+    })
+    @GetMapping("/pending-category")
+    public BlockDto<CaptureDto> getPendingCategoryCaptures(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+
+        Block<Capture> captures = captureService.getPendingCategoryCaptures(page, size);
+        return new BlockDto<>(captureConversor.toCaptureDtos(captures.getItems()), captures.getExistMoreItems());
+    }
+
     private Capture.CaptureType parseCaptureType(String fileType) {
         if (fileType == null || fileType.isBlank()) {
             return null;

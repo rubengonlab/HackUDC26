@@ -86,6 +86,13 @@ public class CaptureServiceImpl implements CaptureService {
 
     @Override
     @Transactional(readOnly = true)
+    public Block<Capture> getPendingCategoryCaptures(int page, int size) {
+        Slice<Capture> slice = captureDao.getCapturesByCategoryStatus(Capture.CategoryStatus.PENDING, page, size);
+        return new Block<>(slice.getContent(), slice.hasNext());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<Capture.CaptureType> getUsedCaptureTypes() {
         return captureDao.getUsedCaptureTypes();
     }

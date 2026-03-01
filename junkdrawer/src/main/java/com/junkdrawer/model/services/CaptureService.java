@@ -19,6 +19,8 @@ public interface CaptureService {
     Block<Capture> getCaptures(LocalDate dateFrom, LocalDate dateTo, Long categoryId, Capture.CaptureType captureType,
             int page, int size);
 
+    Block<Capture> getPendingCategoryCaptures(int page, int size);
+
     List<Capture.CaptureType> getUsedCaptureTypes();
 
     Block<LocalDate> getCaptureDays(int page, int size);

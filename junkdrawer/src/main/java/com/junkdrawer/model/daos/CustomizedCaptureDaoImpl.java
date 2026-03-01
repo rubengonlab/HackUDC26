@@ -44,6 +44,7 @@ public class CustomizedCaptureDaoImpl implements CustomizedCaptureDao {
         }
         if (categoryId != null) {
             queryString.append("AND cat.id = :categoryId ");
+            queryString.append("AND c.categoryStatus IN (:approvedStatus, :uncategorizedStatus) ");
         }
         if (captureType != null) {
             queryString.append("AND c.captureType = :captureType ");
@@ -63,10 +64,38 @@ public class CustomizedCaptureDaoImpl implements CustomizedCaptureDao {
         }
         if (categoryId != null) {
             query.setParameter("categoryId", categoryId);
+            query.setParameter("approvedStatus", Capture.CategoryStatus.APPROVED);
+            query.setParameter("uncategorizedStatus", Capture.CategoryStatus.UNCATEGORIZED);
         }
         if (captureType != null) {
             query.setParameter("captureType", captureType);
         }
+
+        List<Capture> items = query.getResultList();
+        boolean hasNext = items.size() == (size + 1);
+        if (hasNext) {
+            items.remove(items.size() - 1);
+        }
+
+        return new SliceImpl<>(items, PageRequest.of(page, size), hasNext);
+    }
+
+    @Override
+    public Slice<Capture> getCapturesByCategoryStatus(Capture.CategoryStatus categoryStatus, int page, int size) {
+        TypedQuery<Capture> query = entityManager.createQuery(
+                "SELECT c FROM Capture c "
+                        + "LEFT JOIN FETCH c.category cat "
+                        + "LEFT JOIN FETCH c.note n "
+                        + "LEFT JOIN FETCH c.link l "
+                        + "LEFT JOIN FETCH c.audio a "
+                        + "LEFT JOIN FETCH c.image i "
+                        + "LEFT JOIN FETCH c.document d "
+                        + "WHERE c.categoryStatus = :categoryStatus "
+                        + "ORDER BY c.createdAt DESC, c.id DESC",
+                Capture.class)
+                .setParameter("categoryStatus", categoryStatus)
+                .setFirstResult(page * size)
+                .setMaxResults(size + 1);
 
         List<Capture> items = query.getResultList();
         boolean hasNext = items.size() == (size + 1);
