@@ -20,8 +20,20 @@ void showNewNoteSheet(BuildContext context) {
   );
 }
 
+/// Abre directamente el sheet en modo texto con [sharedUrl] prellenado.
+/// Usado cuando el usuario comparte un enlace desde otra app.
+void showSharedUrlSheet(BuildContext context, String sharedUrl) {
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (_) => _NewNoteSheet(initialSharedUrl: sharedUrl),
+  );
+}
+
 class _NewNoteSheet extends StatefulWidget {
-  const _NewNoteSheet();
+  const _NewNoteSheet({this.initialSharedUrl});
+  final String? initialSharedUrl;
   @override
   State<_NewNoteSheet> createState() => _NewNoteSheetState();
 }
@@ -29,7 +41,14 @@ class _NewNoteSheet extends StatefulWidget {
 enum _SheetMode { picker, text, audio, image }
 
 class _NewNoteSheetState extends State<_NewNoteSheet> {
-  _SheetMode _mode = _SheetMode.picker;
+  late _SheetMode _mode;
+
+  @override
+  void initState() {
+    super.initState();
+    // Si llega una URL compartida, abrir directamente en modo texto
+    _mode = widget.initialSharedUrl != null ? _SheetMode.text : _SheetMode.picker;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -48,6 +67,7 @@ class _NewNoteSheetState extends State<_NewNoteSheet> {
             key: const ValueKey('text'),
             onBack: () => setState(() => _mode = _SheetMode.picker),
             onSaved: () => Navigator.of(context).pop(),
+            initialContent: widget.initialSharedUrl,
           ),
         _SheetMode.audio => _AudioNoteView(
             key: const ValueKey('audio'),
@@ -207,9 +227,10 @@ class _TypeButton extends StatelessWidget {
 // Vista 2: nota de texto
 // ─────────────────────────────────────────────────────────────────────────────
 class _TextNoteView extends StatefulWidget {
-  const _TextNoteView({super.key, required this.onBack, required this.onSaved});
+  const _TextNoteView({super.key, required this.onBack, required this.onSaved, this.initialContent});
   final VoidCallback onBack;
   final VoidCallback onSaved;
+  final String? initialContent;
   @override
   State<_TextNoteView> createState() => _TextNoteViewState();
 }
@@ -219,10 +240,16 @@ class _TextNoteViewState extends State<_TextNoteView> {
   static const _kPrimary = Color(0xFFFF5856);
 
   final _titleCtrl = TextEditingController();
-  final _contentCtrl = TextEditingController();
+  late final TextEditingController _contentCtrl;
   String? _selectedCategoryId;
   bool _saving = false;
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _contentCtrl = TextEditingController(text: widget.initialContent ?? '');
+  }
 
   @override
   void dispose() {
