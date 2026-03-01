@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Permitir HTTP en claro para el servidor local de desarrollo -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">10.20.29.99</domain>
+    </domain-config>
+</network-security-config>
+

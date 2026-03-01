@@ -1,0 +1,209 @@
+package com.junkdrawer.rest.dtos;
+
+import java.time.LocalDateTime;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+
+@Schema(name = "Image", description = "Recurso de imagen asociado a una captura.")
+public class ImageDto {
+
+    @Schema(description = "Identificador de la imagen", example = "1")
+    private Long id;
+
+    @Schema(description = "Identificador de la captura asociada", example = "10")
+    private Long captureId;
+
+    @Schema(description = "Nombre interno del fichero", example = "8ec1e247-44c2-4122-a631-1efd8cce1b25.jpg")
+    private String fileName;
+
+    @Schema(description = "Nombre original del fichero", example = "captura.jpg")
+    private String originalFileName;
+
+    @Schema(description = "Tipo MIME del fichero", example = "image/jpeg")
+    private String mimeType;
+
+    @Schema(description = "Tamano del fichero en bytes", example = "253321")
+    private Long size;
+
+    @Schema(description = "Ruta de almacenamiento en servidor", example = "uploads/image/8ec1e247-44c2-4122-a631-1efd8cce1b25.jpg")
+    private String storagePath;
+
+    @Schema(description = "URL publica para visualizar/descargar la imagen", example = "http://localhost:8080/image/1/content")
+    private String contentUrl;
+
+    @Schema(description = "Fecha de creacion de la captura", example = "2026-02-28T13:00:00")
+    private LocalDateTime createdAt;
+
+    @Schema(description = "Estado de categoria de la captura", example = "PENDING")
+    private String categoryStatus;
+
+    @Schema(description = "Id de categoria si existe", example = "2", accessMode = Schema.AccessMode.READ_ONLY)
+    private Long categoryId;
+
+    @Schema(description = "Titulo resumido generado para la captura", example = "Resumen del ticket", accessMode = Schema.AccessMode.READ_ONLY)
+    private String title;
+
+    @Schema(description = "Contexto asociado", example = "Foto de pantalla del error")
+    private String contextText;
+
+    @Schema(description = "Texto extraido por OCR. Puede ser nulo si no se pudo extraer", example = "Error 500 en la ruta /api/v1")
+    private String parsedText;
+
+    @Schema(description = "Texto OCR reordenado por IA", example = "Incidencia detectada: Error 500 en endpoint /api/v1")
+    private String reorderedParsedText;
+
+    @Schema(description = "Estado del procesamiento del texto OCR", example = "PROCESSED")
+    private String textStatus;
+
+    public ImageDto() {
+    }
+
+    public ImageDto(Long id, Long captureId, String fileName, String originalFileName, String mimeType, Long size,
+            String storagePath, String contentUrl, LocalDateTime createdAt, String categoryStatus, Long categoryId,
+            String title, String contextText, String parsedText, String reorderedParsedText, String textStatus) {
+        this.id = id;
+        this.captureId = captureId;
+        this.fileName = fileName;
+        this.originalFileName = originalFileName;
+        this.mimeType = mimeType;
+        this.size = size;
+        this.storagePath = storagePath;
+        this.contentUrl = contentUrl;
+        this.createdAt = createdAt;
+        this.categoryStatus = categoryStatus;
+        this.categoryId = categoryId;
+        this.title = title;
+        this.contextText = contextText;
+        this.parsedText = parsedText;
+        this.reorderedParsedText = reorderedParsedText;
+        this.textStatus = textStatus;
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public Long getCaptureId() {
+        return captureId;
+    }
+
+    public void setCaptureId(Long captureId) {
+        this.captureId = captureId;
+    }
+
+    public String getFileName() {
+        return fileName;
+    }
+
+    public void setFileName(String fileName) {
+        this.fileName = fileName;
+    }
+
+    public String getOriginalFileName() {
+        return originalFileName;
+    }
+
+    public void setOriginalFileName(String originalFileName) {
+        this.originalFileName = originalFileName;
+    }
+
+    public String getMimeType() {
+        return mimeType;
+    }
+
+    public void setMimeType(String mimeType) {
+        this.mimeType = mimeType;
+    }
+
+    public Long getSize() {
+        return size;
+    }
+
+    public void setSize(Long size) {
+        this.size = size;
+    }
+
+    public String getStoragePath() {
+        return storagePath;
+    }
+
+    public void setStoragePath(String storagePath) {
+        this.storagePath = storagePath;
+    }
+
+    public String getContentUrl() {
+        return contentUrl;
+    }
+
+    public void setContentUrl(String contentUrl) {
+        this.contentUrl = contentUrl;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public String getCategoryStatus() {
+        return categoryStatus;
+    }
+
+    public void setCategoryStatus(String categoryStatus) {
+        this.categoryStatus = categoryStatus;
+    }
+
+    public Long getCategoryId() {
+        return categoryId;
+    }
+
+    public void setCategoryId(Long categoryId) {
+        this.categoryId = categoryId;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public String getContextText() {
+        return contextText;
+    }
+
+    public void setContextText(String contextText) {
+        this.contextText = contextText;
+    }
+
+    public String getParsedText() {
+        return parsedText;
+    }
+
+    public void setParsedText(String parsedText) {
+        this.parsedText = parsedText;
+    }
+
+    public String getReorderedParsedText() {
+        return reorderedParsedText;
+    }
+
+    public void setReorderedParsedText(String reorderedParsedText) {
+        this.reorderedParsedText = reorderedParsedText;
+    }
+
+    public String getTextStatus() {
+        return textStatus;
+    }
+
+    public void setTextStatus(String textStatus) {
+        this.textStatus = textStatus;
+    }
+}
