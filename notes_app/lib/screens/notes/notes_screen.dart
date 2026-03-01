@@ -148,18 +148,18 @@ class _ActiveFiltersBar extends StatelessWidget {
   static const _kPrimary = Color(0xFFFF5856);
 
   static const _typeLabels = {
-    'NOTE': '📝 Texto',
-    'LINK': '🔗 Enlace',
-    'AUDIO': '🎙️ Audio',
-    'IMAGE': '🖼️ Imagen',
+    'NOTE':     '📝 Texto',
+    'LINK':     '🔗 Enlace',
+    'AUDIO':    '🎙️ Audio',
+    'IMAGE':    '🖼️ Imagen',
     'DOCUMENT': '📄 Doc',
   };
 
   static const _typeIcons = {
-    'NOTE': Icons.sticky_note_2_outlined,
-    'LINK': Icons.link_rounded,
-    'AUDIO': Icons.mic_rounded,
-    'IMAGE': Icons.image_outlined,
+    'NOTE':     Icons.sticky_note_2_outlined,
+    'LINK':     Icons.link_rounded,
+    'AUDIO':    Icons.mic_rounded,
+    'IMAGE':    Icons.image_outlined,
     'DOCUMENT': Icons.description_outlined,
   };
 

@@ -8,11 +8,13 @@ import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.method.ParameterErrors;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.method.annotation.HandlerMethodValidationException;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import com.junkdrawer.model.common.DuplicateInstanceException;
 import com.junkdrawer.model.common.InstanceNotFoundException;
@@ -112,5 +114,19 @@ public class CommonControllerAdvice {
     @ResponseBody
     public ErrorsDto handleIllegalArgumentException(IllegalArgumentException exception) {
         return new ErrorsDto(exception.getMessage());
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    @ResponseStatus(HttpStatus.PAYLOAD_TOO_LARGE)
+    @ResponseBody
+    public ErrorsDto handleMaxUploadSizeExceededException(MaxUploadSizeExceededException exception) {
+        return new ErrorsDto("El archivo supera el tamaño máximo permitido.");
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    @ResponseBody
+    public ErrorsDto handleDataIntegrityViolationException(DataIntegrityViolationException exception) {
+        return new ErrorsDto("El archivo ya existe o hay un conflicto con los datos enviados.");
     }
 }

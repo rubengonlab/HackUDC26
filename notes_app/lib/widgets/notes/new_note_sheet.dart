@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import '../../models/index.dart';
 import '../../providers/index.dart';
@@ -50,7 +52,7 @@ class _NewNoteSheet extends StatefulWidget {
   State<_NewNoteSheet> createState() => _NewNoteSheetState();
 }
 
-enum _SheetMode { picker, text, audio, image }
+enum _SheetMode { picker, text, audio, image, document }
 
 class _NewNoteSheetState extends State<_NewNoteSheet> {
   late _SheetMode _mode;
@@ -84,6 +86,7 @@ class _NewNoteSheetState extends State<_NewNoteSheet> {
             onText: () => setState(() => _mode = _SheetMode.text),
             onAudio: () => setState(() => _mode = _SheetMode.audio),
             onImage: () => setState(() => _mode = _SheetMode.image),
+            onDocument: () => setState(() => _mode = _SheetMode.document),
           ),
         _SheetMode.text => _TextNoteView(
             key: const ValueKey('text'),
@@ -102,6 +105,11 @@ class _NewNoteSheetState extends State<_NewNoteSheet> {
             onSaved: _handleSaved,
             initialFile: widget.initialSharedImage,
           ),
+        _SheetMode.document => _DocumentNoteView(
+            key: const ValueKey('document'),
+            onBack: () => setState(() => _mode = _SheetMode.picker),
+            onSaved: _handleSaved,
+          ),
       },
     );
   }
@@ -116,10 +124,12 @@ class _PickerView extends StatelessWidget {
     required this.onText,
     required this.onAudio,
     required this.onImage,
+    required this.onDocument,
   });
   final VoidCallback onText;
   final VoidCallback onAudio;
   final VoidCallback onImage;
+  final VoidCallback onDocument;
 
   static const _kBg = Color(0xFF1A1F4D);
   static const _kPrimary = Color(0xFFFF5856);
@@ -152,6 +162,7 @@ class _PickerView extends StatelessWidget {
               style: TextStyle(
                   color: Colors.white.withValues(alpha: 0.5), fontSize: 14)),
           const SizedBox(height: 28),
+          // Fila 1: texto, audio
           Row(
             children: [
               Expanded(
@@ -173,7 +184,12 @@ class _PickerView extends StatelessWidget {
                   onTap: onAudio,
                 ),
               ),
-              const SizedBox(width: 12),
+            ],
+          ),
+          const SizedBox(height: 12),
+          // Fila 2: imagen, documento
+          Row(
+            children: [
               Expanded(
                 child: _TypeButton(
                   emoji: '🖼️',
@@ -181,6 +197,16 @@ class _PickerView extends StatelessWidget {
                   sublabel: 'Foto o galería',
                   color: const Color(0xFF56C288),
                   onTap: onImage,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _TypeButton(
+                  emoji: '📄',
+                  label: 'Documento',
+                  sublabel: '.pdf, .js, .json...',
+                  color: const Color(0xFF9B8EA8),
+                  onTap: onDocument,
                 ),
               ),
             ],
@@ -964,6 +990,290 @@ class _ImageNoteViewState extends State<_ImageNoteView> {
                             color: Colors.white,
                             fontWeight: FontWeight.w700,
                             fontSize: 15)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Vista 5: subida de documento
+// ─────────────────────────────────────────────────────────────────────────────
+class _DocumentNoteView extends StatefulWidget {
+  const _DocumentNoteView({super.key, required this.onBack, required this.onSaved});
+  final VoidCallback onBack;
+  final void Function(bool approved) onSaved;
+  @override
+  State<_DocumentNoteView> createState() => _DocumentNoteViewState();
+}
+
+class _DocumentNoteViewState extends State<_DocumentNoteView> {
+  static const _kBg      = Color(0xFF1A1F4D);
+  static const _kAccent  = Color(0xFF9B8EA8);
+
+  File? _pickedFile;
+  final _contextCtrl = TextEditingController();
+  String? _selectedCategoryId;
+  bool _uploading = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _contextCtrl.dispose();
+    super.dispose();
+  }
+
+  /// Copia el archivo al directorio temporal de la app.
+  /// Necesario en Android porque FilePicker puede devolver content:// URIs
+  /// que no son paths de fichero directamente accesibles por la API de File.
+  Future<File?> _copyToTemp(File source, String fileName) async {
+    final tmpDir = await getTemporaryDirectory();
+    final dest = File('${tmpDir.path}/$fileName');
+    return await source.copy(dest.path);
+  }
+
+  Future<void> _pickFile() async {
+    setState(() => _error = null);
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: [
+          'pdf', 'txt', 'md', 'csv',
+          'js', 'ts', 'json', 'xml', 'yaml', 'yml', 'toml',
+          'dart', 'py', 'java', 'kt', 'swift', 'cpp', 'c', 'h',
+          'doc', 'docx', 'odt', 'xls', 'xlsx', 'ods',
+          'html', 'css', 'sql', 'sh', 'bat', 'log',
+        ],
+        allowMultiple: false,
+        withData: true, // pedir bytes para garantizar acceso en Android
+      );
+      if (result == null) return;
+      final picked = result.files.single;
+
+      if (picked.path != null) {
+        // Path real disponible — úsalo directamente
+        setState(() => _pickedFile = File(picked.path!));
+      } else if (picked.bytes != null) {
+        // Sin path (típico en Android con content:// URIs) — guardamos en temp
+        final tmpDir = await getTemporaryDirectory();
+        final tmpFile = File('${tmpDir.path}/${picked.name}');
+        await tmpFile.writeAsBytes(picked.bytes!);
+        setState(() => _pickedFile = tmpFile);
+      }
+    } catch (e) {
+      setState(() => _error = 'No se pudo abrir el selector: ${e.toString()}');
+    }
+  }
+
+  Future<void> _upload(BuildContext ctx) async {
+    if (_pickedFile == null) return;
+    setState(() { _uploading = true; _error = null; });
+    try {
+      final catId = int.tryParse(_selectedCategoryId ?? '');
+      await ApiService.createDocument(
+        documentFile: _pickedFile!,
+        contextText: _contextCtrl.text.trim().isEmpty ? null : _contextCtrl.text.trim(),
+        categoryId: catId,
+      );
+      if (ctx.mounted) ctx.read<NotesProvider>().loadNotes();
+      widget.onSaved(catId != null);
+    } on BadRequestException catch (e) {
+      setState(() { _error = e.message; _uploading = false; });
+    } on NotFoundException catch (e) {
+      setState(() { _error = e.message; _uploading = false; });
+    } on DuplicateException catch (e) {
+      setState(() { _error = e.message; _uploading = false; });
+    } on NetworkException catch (e) {
+      setState(() { _error = e.message; _uploading = false; });
+    } on ServerException catch (e) {
+      setState(() { _error = e.message; _uploading = false; });
+    } catch (e) {
+      setState(() { _error = e.toString(); _uploading = false; });
+    }
+  }
+
+  String _formatSize(int bytes) {
+    if (bytes < 1024) return '$bytes B';
+    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+  }
+
+  String _docEmoji(String path) {
+    final ext = path.split('.').last.toLowerCase();
+    if (['pdf'].contains(ext)) return '📕';
+    if (['js', 'ts', 'dart', 'py', 'java', 'kt', 'swift', 'cpp', 'c', 'h'].contains(ext)) return '💻';
+    if (['json', 'xml', 'yaml', 'yml', 'toml'].contains(ext)) return '⚙️';
+    if (['md', 'txt', 'csv'].contains(ext)) return '📃';
+    if (['doc', 'docx', 'odt'].contains(ext)) return '📝';
+    if (['xls', 'xlsx', 'ods'].contains(ext)) return '📊';
+    return '📄';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final categories = context.watch<CategoriesProvider>().getAllCategories();
+    final fileName = _pickedFile?.path.split('/').last ?? '';
+    final fileSize = _pickedFile != null
+        ? _formatSize(_pickedFile!.lengthSync())
+        : '';
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: Container(
+        decoration: const BoxDecoration(
+          color: _kBg,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: EdgeInsets.fromLTRB(
+          20, 12, 20,
+          24 + MediaQuery.of(context).padding.bottom,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Handle
+            Center(child: Container(
+              width: 40, height: 4,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            )),
+            const SizedBox(height: 12),
+            // Cabecera
+            Row(
+              children: [
+                GestureDetector(
+                  onTap: _uploading ? null : widget.onBack,
+                  child: Icon(Icons.arrow_back_ios_new_rounded,
+                      color: Colors.white.withValues(alpha: 0.6), size: 20),
+                ),
+                const SizedBox(width: 12),
+                const Text('Documento',
+                    style: TextStyle(color: Colors.white,
+                        fontSize: 18, fontWeight: FontWeight.w700)),
+              ],
+            ),
+            const SizedBox(height: 20),
+
+            // Zona de selección / previsualización
+            GestureDetector(
+              onTap: _uploading ? null : _pickFile,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
+                decoration: BoxDecoration(
+                  color: _pickedFile != null
+                      ? _kAccent.withValues(alpha: 0.1)
+                      : const Color(0xFF252B5C),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: _pickedFile != null
+                        ? _kAccent.withValues(alpha: 0.5)
+                        : Colors.white.withValues(alpha: 0.12),
+                    width: 2,
+                  ),
+                ),
+                child: _pickedFile == null
+                    ? Column(
+                        children: [
+                          Icon(Icons.upload_file_rounded,
+                              size: 40, color: _kAccent.withValues(alpha: 0.7)),
+                          const SizedBox(height: 10),
+                          Text('Toca para seleccionar un archivo',
+                              style: TextStyle(
+                                  color: Colors.white.withValues(alpha: 0.55),
+                                  fontSize: 14)),
+                          const SizedBox(height: 4),
+                          Text('.pdf, .js, .json, .txt, .md, .csv y más',
+                              style: TextStyle(
+                                  color: Colors.white.withValues(alpha: 0.3),
+                                  fontSize: 12)),
+                        ],
+                      )
+                    : Row(
+                        children: [
+                          Text(_docEmoji(_pickedFile!.path),
+                              style: const TextStyle(fontSize: 32)),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(fileName,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 13)),
+                                const SizedBox(height: 4),
+                                Text(fileSize,
+                                    style: TextStyle(
+                                        color: Colors.white.withValues(alpha: 0.4),
+                                        fontSize: 12)),
+                              ],
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: _uploading ? null : () => setState(() => _pickedFile = null),
+                            child: Icon(Icons.close_rounded,
+                                size: 20, color: Colors.white.withValues(alpha: 0.4)),
+                          ),
+                        ],
+                      ),
+              ),
+            ),
+            const SizedBox(height: 14),
+
+            // Categoría
+            _CategorySelector(
+              categories: categories,
+              selectedId: _selectedCategoryId,
+              onChanged: (id) => setState(() => _selectedCategoryId = id),
+            ),
+            const SizedBox(height: 12),
+
+            // Contexto
+            _InputField(
+              controller: _contextCtrl,
+              hint: 'Descripción o contexto (opcional)',
+              maxLines: 2,
+            ),
+
+            if (_error != null) ...[
+              const SizedBox(height: 12),
+              _ErrorBanner(message: _error!),
+            ],
+            const SizedBox(height: 20),
+
+            // Botón guardar
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _pickedFile != null && !_uploading
+                    ? () => _upload(context)
+                    : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _kAccent,
+                  disabledBackgroundColor: _kAccent.withValues(alpha: 0.25),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14)),
+                  elevation: 0,
+                ),
+                child: _uploading
+                    ? const SizedBox(width: 22, height: 22,
+                        child: CircularProgressIndicator(
+                            color: Colors.white, strokeWidth: 2.5))
+                    : const Text('Guardar documento',
+                        style: TextStyle(color: Colors.white,
+                            fontWeight: FontWeight.w700, fontSize: 15)),
               ),
             ),
           ],

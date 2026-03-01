@@ -71,7 +71,7 @@ CREATE TABLE Image (
 CREATE TABLE Document (
     id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
     fileName VARCHAR(255) NOT NULL,
-    originalFileName VARCHAR(255) NOT NULL UNIQUE,
+    originalFileName VARCHAR(255) NOT NULL,
     mimeType VARCHAR(100) NOT NULL,
     size BIGINT NOT NULL,
     storagePath VARCHAR(500) NOT NULL,

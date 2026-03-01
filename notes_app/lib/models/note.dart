@@ -1,4 +1,4 @@
-enum NoteType { audio, text, image, link }
+enum NoteType { audio, text, image, link, document }
 
 enum CategoryStatus { uncategorized, pending, approved }
 
@@ -37,19 +37,21 @@ class Note {
 
   static String typeLabel(NoteType type) {
     switch (type) {
-      case NoteType.audio: return 'Audio';
-      case NoteType.text:  return 'Texto';
-      case NoteType.image: return 'Imagen';
-      case NoteType.link:  return 'Enlace';
+      case NoteType.audio:    return 'Audio';
+      case NoteType.text:     return 'Texto';
+      case NoteType.image:    return 'Imagen';
+      case NoteType.link:     return 'Enlace';
+      case NoteType.document: return 'Documento';
     }
   }
 
   static String typeEmoji(NoteType type) {
     switch (type) {
-      case NoteType.audio: return '🎙️';
-      case NoteType.text:  return '📝';
-      case NoteType.image: return '🖼️';
-      case NoteType.link:  return '🔗';
+      case NoteType.audio:    return '🎙️';
+      case NoteType.text:     return '📝';
+      case NoteType.image:    return '🖼️';
+      case NoteType.link:     return '🔗';
+      case NoteType.document: return '📄';
     }
   }
 
@@ -123,11 +125,12 @@ class Note {
         preview = url;
         break;
       case 'DOCUMENT':
-        type = NoteType.image; // reuse image icon for now
+        type = NoteType.document;
         final doc = json['document'] as Map<String, dynamic>?;
         title = json['title'] as String? ??
             doc?['originalFileName'] as String? ?? 'Documento';
-        preview = json['contextText'] as String?;
+        preview = doc?['parsedText'] as String?;
+        reorderedText = doc?['reorderedParsedText'] as String?;
         contentUrl = doc?['contentUrl'] as String?;
         break;
       default: // NOTE

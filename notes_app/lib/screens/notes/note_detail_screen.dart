@@ -10,10 +10,11 @@ class NoteDetailScreen extends StatelessWidget {
   static const _kPrimary = Color(0xFFFF5856);
 
   static const _typeColors = {
-    NoteType.text:  Color(0xFF4C9FE0),
-    NoteType.audio: Color(0xFFFF5856),
-    NoteType.image: Color(0xFF56C288),
-    NoteType.link:  Color(0xFFFFB347),
+    NoteType.text:     Color(0xFF4C9FE0),
+    NoteType.audio:    Color(0xFFFF5856),
+    NoteType.image:    Color(0xFF56C288),
+    NoteType.link:     Color(0xFFFFB347),
+    NoteType.document: Color(0xFF9B8EA8),
   };
 
   Color get _accent => _typeColors[note.type] ?? _kPrimary;
@@ -59,10 +60,11 @@ class NoteDetailScreen extends StatelessWidget {
 
             // Contenido principal según tipo
             switch (note.type) {
-              NoteType.image => _ImageContent(note: note, accent: _accent),
-              NoteType.audio => _AudioContent(note: note, accent: _accent),
-              NoteType.link  => _LinkContent(note: note, accent: _accent),
-              NoteType.text  => _TextContent(note: note, accent: _accent),
+              NoteType.image    => _ImageContent(note: note, accent: _accent),
+              NoteType.audio    => _AudioContent(note: note, accent: _accent),
+              NoteType.link     => _LinkContent(note: note, accent: _accent),
+              NoteType.text     => _TextContent(note: note, accent: _accent),
+              NoteType.document => _DocumentContent(note: note, accent: _accent),
             },
           ],
         ),
@@ -367,6 +369,112 @@ class _LinkContent extends StatelessWidget {
           const SizedBox(height: 8),
           _TextBox(text: note.contextText!, accent: accent),
         ],
+      ],
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Contenido: DOCUMENTO
+// ─────────────────────────────────────────────────────────────────────────────
+class _DocumentContent extends StatelessWidget {
+  const _DocumentContent({required this.note, required this.accent});
+  final Note note;
+  final Color accent;
+
+  String _docEmoji(String? fileName) {
+    if (fileName == null) return '📄';
+    final ext = fileName.split('.').last.toLowerCase();
+    if (ext == 'pdf') return '📕';
+    if (['js', 'ts', 'dart', 'py', 'java', 'kt', 'swift', 'cpp', 'c', 'h'].contains(ext)) return '💻';
+    if (['json', 'xml', 'yaml', 'yml', 'toml'].contains(ext)) return '⚙️';
+    if (['md', 'txt', 'csv', 'log'].contains(ext)) return '📃';
+    if (['doc', 'docx', 'odt'].contains(ext)) return '📝';
+    if (['xls', 'xlsx', 'ods'].contains(ext)) return '📊';
+    return '📄';
+  }
+
+  String _formatSize(int? bytes) {
+    if (bytes == null) return '';
+    if (bytes < 1024) return '$bytes B';
+    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final fileName = note.title;
+    final original = note.preview ?? '';
+    final hasReordered = note.reorderedText != null && note.reorderedText!.trim().isNotEmpty;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Tarjeta de archivo
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: accent.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: accent.withValues(alpha: 0.3), width: 2),
+          ),
+          child: Row(
+            children: [
+              Text(_docEmoji(fileName), style: const TextStyle(fontSize: 36)),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(fileName,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14)),
+                    if (note.durationSeconds != null) ...[
+                      const SizedBox(height: 4),
+                      Text(_formatSize(note.durationSeconds),
+                          style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.4),
+                              fontSize: 12)),
+                    ],
+                  ],
+                ),
+              ),
+              Icon(Icons.insert_drive_file_rounded, color: accent, size: 28),
+            ],
+          ),
+        ),
+
+        // Contexto si existe
+        if (note.contextText != null && note.contextText!.trim().isNotEmpty) ...[
+          const SizedBox(height: 20),
+          _SectionLabel(label: 'Contexto', icon: Icons.label_outline_rounded, color: accent),
+          const SizedBox(height: 8),
+          _TextBox(text: note.contextText!, accent: accent),
+        ],
+
+        // Texto extraído (original primero)
+        if (original.isNotEmpty) ...[
+          const SizedBox(height: 20),
+          _SectionLabel(label: 'Contenido extraído', icon: Icons.text_snippet_rounded, color: accent),
+          const SizedBox(height: 8),
+          _TextBox(text: original, accent: accent),
+        ],
+
+        // Reformulado por IA (secundario)
+        if (hasReordered) ...[
+          const SizedBox(height: 20),
+          _SectionLabel(label: 'Reformulado por IA', icon: Icons.auto_awesome_rounded,
+              color: Colors.white.withValues(alpha: 0.4)),
+          const SizedBox(height: 8),
+          _TextBox(text: note.reorderedText!, accent: Colors.white.withValues(alpha: 0.35), dimmed: true),
+        ],
+
+        if (original.isEmpty && !hasReordered && note.contextText == null)
+          _EmptyContent(accent: accent, message: 'Sin contenido extraído'),
       ],
     );
   }

@@ -64,7 +64,6 @@ public class Document {
         this.fileName = fileName;
     }
 
-    @Column(unique = true)
     public String getOriginalFileName() {
         return originalFileName;
     }

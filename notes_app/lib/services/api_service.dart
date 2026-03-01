@@ -17,6 +17,17 @@ class ApiService {
           'Respuesta inesperada del servidor (código ${response.statusCode}).');
     }
   }
+
+  /// Extrae el mensaje de error del body del backend.
+  /// El backend usa ErrorsDto con campo "globalError" (o "message" como fallback).
+  /// También soporta el formato de error genérico de Spring Boot (campo "error").
+  static String? _errorMsg(dynamic decoded, [String? fallback]) {
+    if (decoded is Map) {
+      final msg = decoded['globalError'] ?? decoded['message'] ?? decoded['error'];
+      return msg as String? ?? fallback;
+    }
+    return fallback;
+  }
   // POST /categories
   static Future<Map<String, dynamic>?> createCategory(String categoryName) async {
     try {
@@ -31,8 +42,7 @@ class ApiService {
         return _safeDecodeBody(response) as Map<String, dynamic>?;
       } else if (response.statusCode == 400) {
         final d = _safeDecodeBody(response);
-        final msg = (d is Map ? d['message'] : null) ?? 'Datos inválidos.';
-        throw BadRequestException(msg as String);
+        throw BadRequestException(_errorMsg(d, 'Datos inválidos.')!);
       } else if (response.statusCode == 409) {
         throw BadRequestException('La categoría ya existe en el servidor.');
       } else {
@@ -65,9 +75,10 @@ class ApiService {
         return _safeDecodeBody(response) as Map<String, dynamic>? ?? {};
       } else if (response.statusCode == 400) {
         final d = _safeDecodeBody(response);
-        throw BadRequestException((d is Map ? d['message'] : null) ?? 'El contenido no puede estar vacío.');
+        throw BadRequestException((d is Map ? (d['globalError'] ?? d['message']) : null) ?? 'El contenido no puede estar vacío.');
       } else if (response.statusCode == 404) {
-        throw NotFoundException('La categoría seleccionada no existe.');
+        final d = _safeDecodeBody(response);
+        throw NotFoundException((d is Map ? (d['globalError'] ?? d['message']) : null) ?? 'La categoría seleccionada no existe.');
       } else if (response.statusCode == 409) {
         throw DuplicateException('Ya existe una nota con ese contenido.');
       } else {
@@ -100,9 +111,10 @@ class ApiService {
         return _safeDecodeBody(response) as Map<String, dynamic>? ?? {};
       } else if (response.statusCode == 400) {
         final d = _safeDecodeBody(response);
-        throw BadRequestException((d is Map ? d['message'] : null) ?? 'Archivo de audio no válido.');
+        throw BadRequestException((d is Map ? (d['globalError'] ?? d['message']) : null) ?? 'Archivo de audio no válido.');
       } else if (response.statusCode == 404) {
-        throw NotFoundException('La categoría seleccionada no existe.');
+        final d = _safeDecodeBody(response);
+        throw NotFoundException((d is Map ? (d['globalError'] ?? d['message']) : null) ?? 'La categoría seleccionada no existe.');
       } else {
         throw ServerException('Error del servidor (código ${response.statusCode}).');
       }
@@ -133,13 +145,16 @@ class ApiService {
         return _safeDecodeBody(response) as Map<String, dynamic>? ?? {};
       } else if (response.statusCode == 400) {
         final d = _safeDecodeBody(response);
-        throw BadRequestException((d is Map ? d['message'] : null) ?? 'Archivo de imagen no válido.');
+        throw BadRequestException((d is Map ? (d['globalError'] ?? d['message']) : null) ?? 'Archivo de imagen no válido.');
+      } else if (response.statusCode == 404) {
+        final d = _safeDecodeBody(response);
+        throw NotFoundException((d is Map ? (d['globalError'] ?? d['message']) : null) ?? 'La categoría seleccionada no existe.');
       } else {
         throw ServerException('Error del servidor (código ${response.statusCode}).');
       }
     } on TimeoutException { throw NetworkException('La subida tardó demasiado.');
     } on http.ClientException catch (e) { throw NetworkException('Sin conexión. (${e.message})');
-    } on BadRequestException { rethrow; } on ServerException { rethrow;
+    } on BadRequestException { rethrow; } on NotFoundException { rethrow; } on ServerException { rethrow;
     } catch (e) { throw NetworkException('Error inesperado: ${e.toString()}'); }
   }
   // GET /categories
@@ -232,6 +247,51 @@ class ApiService {
     } on NotFoundException { rethrow; } on ServerException { rethrow;
     } catch (e) { throw NetworkException('Error inesperado: ${e.toString()}'); }
   }
+  // POST /document
+  static Future<Map<String, dynamic>> createDocument({
+    required File documentFile,
+    String? contextText,
+    int? categoryId,
+  }) async {
+    try {
+      final request = http.MultipartRequest('POST', Uri.parse('$_baseUrl/document'));
+      final docMime = _mimeTypeFromPath(documentFile.path, defaultMime: 'application/octet-stream');
+      request.files.add(await http.MultipartFile.fromPath(
+        'file',
+        documentFile.path,
+        contentType: MediaType.parse(docMime),
+      ));
+      if (contextText != null && contextText.isNotEmpty) request.fields['contextText'] = contextText;
+      if (categoryId != null) request.fields['categoryId'] = categoryId.toString();
+      final streamed = await request.send().timeout(_kTimeoutAudio);
+      final response = await http.Response.fromStream(streamed);
+      if (response.statusCode == 201) {
+        return _safeDecodeBody(response) as Map<String, dynamic>? ?? {};
+      } else {
+        // Para cualquier error, intentamos leer el mensaje real del servidor
+        dynamic d;
+        try { d = _safeDecodeBody(response); } catch (_) { d = null; }
+        final serverMsg = _errorMsg(d);
+        if (response.statusCode == 400) {
+          throw BadRequestException(serverMsg ?? 'Archivo de documento no válido.');
+        } else if (response.statusCode == 404) {
+          throw NotFoundException(serverMsg ?? 'Recurso no encontrado (código 404).');
+        } else if (response.statusCode == 409) {
+          throw DuplicateException(serverMsg ?? 'Ya existe un documento con ese nombre de archivo.');
+        } else if (response.statusCode == 413) {
+          throw BadRequestException('El archivo es demasiado grande para el servidor.');
+        } else if (response.statusCode == 500) {
+          throw ServerException(serverMsg ?? 'Error interno del servidor al procesar el documento.');
+        } else {
+          throw ServerException(serverMsg ?? 'Error del servidor (código ${response.statusCode}).');
+        }
+      }
+    } on TimeoutException { throw NetworkException('La subida tardó demasiado.');
+    } on http.ClientException catch (e) { throw NetworkException('Sin conexión. (${e.message})');
+    } on BadRequestException { rethrow; } on NotFoundException { rethrow; } on ServerException { rethrow;
+    } catch (e) { throw NetworkException('Error inesperado: ${e.toString()}'); }
+  }
+
   // GET /captures/pending-category  →  capturas pendientes de revisar por el usuario
   // El backend marca como UNCATEGORIZED cuando la IA no puede asignar categoría,
   // y como PENDING mientras está procesando. Mostramos ambas (todo lo que no sea APPROVED).
@@ -362,6 +422,55 @@ class ApiService {
         return 'audio/flac';
       case '3gp':
         return 'audio/3gpp';
+      case 'webm':
+        return 'audio/webm';
+      // Documentos
+      case 'pdf':
+        return 'application/pdf';
+      case 'txt':
+      case 'md':
+      case 'log':
+      case 'csv':
+        return 'text/plain';
+      case 'html':
+      case 'htm':
+        return 'text/html';
+      case 'css':
+        return 'text/css';
+      case 'js':
+      case 'mjs':
+        return 'application/javascript';
+      case 'ts':
+        return 'application/typescript';
+      case 'json':
+        return 'application/json';
+      case 'xml':
+        return 'application/xml';
+      case 'yaml':
+      case 'yml':
+        return 'application/yaml';
+      case 'dart':
+      case 'py':
+      case 'java':
+      case 'kt':
+      case 'swift':
+      case 'cpp':
+      case 'c':
+      case 'h':
+      case 'sh':
+      case 'bat':
+      case 'sql':
+        return 'text/plain';
+      case 'doc':
+        return 'application/msword';
+      case 'docx':
+        return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+      case 'xls':
+        return 'application/vnd.ms-excel';
+      case 'xlsx':
+        return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+      case 'zip':
+        return 'application/zip';
       default:
         return defaultMime;
     }

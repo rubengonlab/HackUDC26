@@ -19,6 +19,7 @@ dependencies:
   http_parser: ^4.0.2
   image_picker: ^1.1.2
   path_provider: ^2.1.4
+  file_picker: ^10.3.10
 
 # Bloquear versiones de sub-paquetes iOS/macOS que arrastran objective_c
 # con native hooks (hook/build.dart) → causan error "Android NDK not found"
