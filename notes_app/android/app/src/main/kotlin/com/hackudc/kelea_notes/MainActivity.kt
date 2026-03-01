@@ -3,6 +3,7 @@ package com.hackudc.kelea_notes
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.media.MediaPlayer
 import android.media.MediaRecorder
 import android.net.Uri
 import android.os.Build
@@ -14,6 +15,8 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import java.io.File
 import java.io.FileOutputStream
+import java.net.HttpURLConnection
+import java.net.URL
 
 class MainActivity : FlutterActivity() {
 
@@ -22,24 +25,32 @@ class MainActivity : FlutterActivity() {
     private val MIC_PERMISSION_CODE = 101
 
     private var recorder: MediaRecorder? = null
+    private var player: MediaPlayer? = null
     private var currentPath: String? = null
     private var pendingResult: MethodChannel.Result? = null
 
     private var pendingSharedUrl: String? = null
     private var pendingSharedImageUri: String? = null
     private var shareMethodChannel: MethodChannel? = null
+    private var audioChannel: MethodChannel? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
 
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL)
-            .setMethodCallHandler { call, result ->
-                when (call.method) {
-                    "start" -> startRecording(result)
-                    "stop"  -> stopRecording(result)
-                    else    -> result.notImplemented()
+        audioChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL)
+        audioChannel!!.setMethodCallHandler { call, result ->
+            when (call.method) {
+                "start"        -> startRecording(result)
+                "stop"         -> stopRecording(result)
+                "playUrl"      -> {
+                    val url = call.argument<String>("url")
+                    if (url == null) { result.error("INVALID_URL", "URL nula", null); return@setMethodCallHandler }
+                    playUrl(url, result)
                 }
+                "stopPlayback" -> { stopPlayback(); result.success(null) }
+                else           -> result.notImplemented()
             }
+        }
 
         shareMethodChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, SHARE_CHANNEL)
         shareMethodChannel!!.setMethodCallHandler { call, result ->
@@ -125,6 +136,108 @@ class MainActivity : FlutterActivity() {
                 if (!sharedText.isNullOrBlank()) pendingSharedUrl = sharedText
             }
         }
+    }
+
+    private fun playUrl(url: String, result: MethodChannel.Result) {
+        stopPlayback()
+        var resultSent = false
+
+        fun safeError(code: String, msg: String) {
+            if (!resultSent) { resultSent = true; result.error(code, msg, null) }
+        }
+        fun safeSuccess() {
+            if (!resultSent) { resultSent = true; result.success(null) }
+        }
+
+        val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
+
+        Thread {
+            try {
+                val conn = URL(url).openConnection() as HttpURLConnection
+                conn.connectTimeout = 15_000
+                conn.readTimeout    = 0          // sin límite: necesario para archivos grandes
+                conn.instanceFollowRedirects = true
+                conn.connect()
+
+                val code = conn.responseCode
+                if (code != 200) {
+                    conn.disconnect()
+                    mainHandler.post { safeError("PLAYER_ERROR", "HTTP $code") }
+                    return@Thread
+                }
+
+                // Extensión desde Content-Type
+                val contentType = conn.contentType ?: ""
+                val ext = when {
+                    contentType.contains("mpeg") || contentType.contains("mp3") -> "mp3"
+                    contentType.contains("mp4")  || contentType.contains("m4a") -> "m4a"
+                    contentType.contains("ogg")                                  -> "ogg"
+                    contentType.contains("wav")                                  -> "wav"
+                    contentType.contains("aac")                                  -> "aac"
+                    else                                                         -> "m4a"
+                }
+
+                val tmp = File(cacheDir, "play_${System.currentTimeMillis()}.$ext")
+                try {
+                    conn.inputStream.use { input ->
+                        FileOutputStream(tmp).use { out ->
+                            input.copyTo(out, bufferSize = 64 * 1024) // 64 KB por chunk
+                        }
+                    }
+                } finally {
+                    conn.disconnect()
+                }
+
+                mainHandler.post {
+                    try {
+                        val mp = MediaPlayer()
+                        mp.setDataSource(tmp.absolutePath)
+                        mp.setOnPreparedListener {
+                            it.start()
+                            safeSuccess()
+                            audioChannel?.invokeMethod("onPlaybackStarted", null)
+                        }
+                        mp.setOnCompletionListener {
+                            audioChannel?.invokeMethod("onPlaybackCompleted", null)
+                            stopPlayback()
+                            try { tmp.delete() } catch (_: Exception) {}
+                        }
+                        mp.setOnErrorListener { _, what, extra ->
+                            safeError("PLAYER_ERROR", "MediaPlayer error $what/$extra")
+                            stopPlayback()
+                            try { tmp.delete() } catch (_: Exception) {}
+                            true
+                        }
+                        player = mp
+                        mp.prepareAsync()
+                    } catch (e: Exception) {
+                        safeError("PLAYER_ERROR", e.message ?: "Error al preparar el reproductor")
+                        try { tmp.delete() } catch (_: Exception) {}
+                    }
+                }
+            } catch (e: Throwable) {
+                mainHandler.post { safeError("PLAYER_ERROR", e.message ?: "Error de red") }
+            }
+        }.also { t ->
+            t.uncaughtExceptionHandler = Thread.UncaughtExceptionHandler { _, e ->
+                mainHandler.post { safeError("PLAYER_ERROR", e.message ?: "Error inesperado") }
+            }
+            t.start()
+        }
+    }
+
+    private fun stopPlayback() {
+        try {
+            player?.apply { if (isPlaying) stop(); reset(); release() }
+        } catch (_: Exception) {}
+        player = null
+    }
+
+    override fun onDestroy() {
+        stopPlayback()
+        recorder?.apply { try { stop() } catch (_: Exception) {}; reset(); release() }
+        recorder = null
+        super.onDestroy()
     }
 
     private fun startRecording(result: MethodChannel.Result) {
