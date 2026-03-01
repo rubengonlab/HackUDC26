@@ -123,7 +123,7 @@ btnGuardar.addEventListener('click', async () => {
   textoNota.style.height = 'auto';
   textoNota.dispatchEvent(new Event('input'));
 
-  estadoDiv.innerText = "Sincronizando con JunkDrawer...";
+  estadoDiv.innerHTML = '<div class="loading-container"><div class="spinner"></div><span>Sincronizando nota...</span></div>';
 
   chrome.storage.local.get(['username'], async function(result) {
     chrome.tabs.query({active: true, currentWindow: true}, async (tabs) => {
@@ -163,7 +163,7 @@ function resetUI() {
   inputWrapper.style.display = 'flex';
   btnGuardar.classList.remove('is-recording'); 
   textoNota.dispatchEvent(new Event('input')); 
-  estadoDiv.innerText = '';
+  //estadoDiv.innerText = '';
 }
 
 function actualizarCronometro() {
@@ -183,15 +183,18 @@ btnGrabar.addEventListener('click', async () => {
 
     mediaRecorder.onstop = () => {
       stream.getTracks().forEach(track => track.stop()); 
+      
       if (!grabacionCancelada) {
         const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-        enviarAudioAlBackend(audioBlob);
+        enviarAudioAlBackend(audioBlob); // Aquí se inyecta el spinner
       } else {
         estadoDiv.innerText = "Nota de voz descartada";
+        // Si cancelamos, borramos el mensaje a los 2 segundos
         setTimeout(() => { estadoDiv.innerText = ''; }, 2000);
       }
+      
       audioChunks = []; 
-      resetUI();        
+      resetUI(); // Reinicia botones y cronómetro, pero RESPETA el spinner      
     };
 
     inputWrapper.style.display = 'none';
@@ -224,7 +227,7 @@ btnCancelar.addEventListener('click', () => {
 });
 
 async function enviarAudioAlBackend(audioBlob) {
-  estadoDiv.innerText = "Sincronizando audio...";
+  estadoDiv.innerHTML = '<div class="loading-container"><div class="spinner"></div><span>Sincronizando audio...</span></div>';
 
   const formData = new FormData();
   formData.append('file', audioBlob, 'nota_voz.webm');

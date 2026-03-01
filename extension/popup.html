@@ -196,6 +196,28 @@
 
     .icon-svg { stroke: currentColor; fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
 
+    /* --- SPINNER DE CARGA KELEA --- */
+    .spinner {
+      width: 14px;
+      height: 14px;
+      border: 2px solid var(--primary-light);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    
+    .loading-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      color: var(--accent); /* Resalta el texto mientras carga */
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
   </style>
 </head>
 <body>
