@@ -11,8 +11,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.junkdrawer.model.common.InstanceNotFoundException;
 import com.junkdrawer.model.daos.CaptureDao;
+import com.junkdrawer.model.entities.Audio;
 import com.junkdrawer.model.entities.Capture;
 import com.junkdrawer.model.entities.Category;
+import com.junkdrawer.model.entities.Image;
+import com.junkdrawer.model.entities.Note;
 
 @Service
 @Transactional
@@ -85,6 +88,72 @@ public class CaptureServiceImpl implements CaptureService {
     }
 
     @Override
+    public Capture patchCapture(Long captureId, Long categoryId, String title, String contextText, String reorderedText,
+            String audioName, String imageName) throws InstanceNotFoundException {
+
+        Capture capture = permissionChecker.checkCaptureExists(captureId);
+
+        if (categoryId != null) {
+            Category category = permissionChecker.checkCategoryExists(categoryId);
+            capture.setCategory(category);
+        }
+        if (title != null) {
+            capture.setTitle(title);
+        }
+        if (contextText != null) {
+            capture.setContextText(contextText);
+        }
+        if (reorderedText != null) {
+            applyReorderedText(capture, reorderedText);
+        }
+        if (audioName != null) {
+            if (capture.getAudio() == null) {
+                throw new IllegalArgumentException("La captura no es de tipo AUDIO");
+            }
+            capture.getAudio().setOriginalFileName(audioName);
+        }
+        if (imageName != null) {
+            if (capture.getImage() == null) {
+                throw new IllegalArgumentException("La captura no es de tipo IMAGE");
+            }
+            capture.getImage().setOriginalFileName(imageName);
+        }
+
+        return captureDao.save(capture);
+    }
+
+    @Override
+    public Capture approveStatuses(Long captureId, String target) throws InstanceNotFoundException {
+        Capture capture = permissionChecker.checkCaptureExists(captureId);
+        StatusTarget statusTarget = parseStatusTarget(target);
+
+        if (statusTarget == StatusTarget.ALL || statusTarget == StatusTarget.CATEGORY) {
+            capture.setCategoryStatus(Capture.CategoryStatus.APPROVED);
+        }
+        if (statusTarget == StatusTarget.ALL || statusTarget == StatusTarget.TEXT) {
+            approveTextStatus(capture);
+        }
+
+        return captureDao.save(capture);
+    }
+
+    @Override
+    public Capture rejectStatuses(Long captureId, String target) throws InstanceNotFoundException {
+        Capture capture = permissionChecker.checkCaptureExists(captureId);
+        StatusTarget statusTarget = parseStatusTarget(target);
+
+        if (statusTarget == StatusTarget.ALL || statusTarget == StatusTarget.CATEGORY) {
+            capture.setCategoryStatus(Capture.CategoryStatus.UNCATEGORIZED);
+            capture.setCategory(null);
+        }
+        if (statusTarget == StatusTarget.ALL || statusTarget == StatusTarget.TEXT) {
+            rejectTextStatus(capture);
+        }
+
+        return captureDao.save(capture);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public Block<Capture> getPendingCategoryCaptures(int page, int size) {
         Slice<Capture> slice = captureDao.getCapturesByCategoryStatus(Capture.CategoryStatus.PENDING, page, size);
@@ -102,5 +171,81 @@ public class CaptureServiceImpl implements CaptureService {
     public Block<LocalDate> getCaptureDays(int page, int size) {
         Slice<LocalDate> slice = captureDao.getCaptureDays(page, size);
         return new Block<>(slice.getContent(), slice.hasNext());
+    }
+
+    private void applyReorderedText(Capture capture, String reorderedText) {
+        if (capture.getNote() != null) {
+            Note note = capture.getNote();
+            note.setReorderedText(reorderedText);
+            note.setTextStatus(Note.TextStatus.PROCESSED);
+            return;
+        }
+        if (capture.getAudio() != null) {
+            Audio audio = capture.getAudio();
+            audio.setReorderedParsedText(reorderedText);
+            audio.setTextStatus(Audio.TextStatus.PROCESSED);
+            return;
+        }
+        if (capture.getImage() != null) {
+            Image image = capture.getImage();
+            image.setReorderedParsedText(reorderedText);
+            image.setTextStatus(Image.TextStatus.PROCESSED);
+            return;
+        }
+
+        throw new IllegalArgumentException("La captura no tiene texto reordenado editable para su tipo");
+    }
+
+    private void approveTextStatus(Capture capture) {
+        if (capture.getNote() != null) {
+            capture.getNote().setTextStatus(Note.TextStatus.APPROVED);
+            return;
+        }
+        if (capture.getAudio() != null) {
+            capture.getAudio().setTextStatus(Audio.TextStatus.APPROVED);
+            return;
+        }
+        if (capture.getImage() != null) {
+            capture.getImage().setTextStatus(Image.TextStatus.APPROVED);
+            return;
+        }
+
+        throw new IllegalArgumentException("La captura no soporta estado de texto");
+    }
+
+    private void rejectTextStatus(Capture capture) {
+        if (capture.getNote() != null) {
+            capture.getNote().setTextStatus(Note.TextStatus.FAILED);
+            return;
+        }
+        if (capture.getAudio() != null) {
+            capture.getAudio().setTextStatus(Audio.TextStatus.FAILED);
+            return;
+        }
+        if (capture.getImage() != null) {
+            capture.getImage().setTextStatus(Image.TextStatus.FAILED);
+            return;
+        }
+
+        throw new IllegalArgumentException("La captura no soporta estado de texto");
+    }
+
+    private StatusTarget parseStatusTarget(String target) {
+        if (target == null || target.isBlank()) {
+            return StatusTarget.ALL;
+        }
+
+        return switch (target.trim().toLowerCase()) {
+            case "all" -> StatusTarget.ALL;
+            case "category" -> StatusTarget.CATEGORY;
+            case "text" -> StatusTarget.TEXT;
+            default -> throw new IllegalArgumentException("target invalido. Valores: all, category, text");
+        };
+    }
+
+    private enum StatusTarget {
+        ALL,
+        CATEGORY,
+        TEXT
     }
 }

@@ -19,6 +19,13 @@ public interface CaptureService {
     Block<Capture> getCaptures(LocalDate dateFrom, LocalDate dateTo, Long categoryId, Capture.CaptureType captureType,
             int page, int size);
 
+    Capture patchCapture(Long captureId, Long categoryId, String title, String contextText, String reorderedText,
+            String audioName, String imageName) throws InstanceNotFoundException;
+
+    Capture approveStatuses(Long captureId, String target) throws InstanceNotFoundException;
+
+    Capture rejectStatuses(Long captureId, String target) throws InstanceNotFoundException;
+
     Block<Capture> getPendingCategoryCaptures(int page, int size);
 
     List<Capture.CaptureType> getUsedCaptureTypes();

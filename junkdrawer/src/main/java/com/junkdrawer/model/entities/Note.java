@@ -18,6 +18,7 @@ public class Note {
     public enum TextStatus {
         PENDING,
         PROCESSED,
+        APPROVED,
         FAILED
     }
 
