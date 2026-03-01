@@ -78,7 +78,7 @@ class CategoryChip extends StatelessWidget {
           decoration: BoxDecoration(
             color: bgColor,
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: borderColor, width: isSelected ? 2 : 1.5),
+            border: Border.all(color: borderColor, width: isSelected ? 2.2 : 2.0),
             boxShadow: isSelected
                 ? [
                     BoxShadow(
@@ -116,16 +116,16 @@ class CategoryChip extends StatelessWidget {
                     // Nombre
                     Expanded(
                       child: Text(
-                        cleanName,
+                        cleanName.toUpperCase(),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           color: isSelected
                               ? Colors.white
                               : Colors.white.withValues(alpha: 0.75),
-                          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                          fontSize: 12.5,
-                          letterSpacing: 0.1,
+                          fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                          fontSize: 11.5,
+                          letterSpacing: 0.5,
                         ),
                       ),
                     ),

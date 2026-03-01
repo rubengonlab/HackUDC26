@@ -1136,7 +1136,7 @@ class _CatChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: AnimatedContainer(
+        child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         margin: const EdgeInsets.only(right: 8),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -1146,18 +1146,19 @@ class _CatChip extends StatelessWidget {
               : color.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isSelected ? color : color.withValues(alpha: 0.3),
-            width: 1.5,
+            color: isSelected ? color : color.withValues(alpha: 0.4),
+            width: 2.0,
           ),
         ),
         child: Text(
-          label,
+          label.toUpperCase(),
           style: TextStyle(
             color: isSelected
                 ? Colors.white
                 : Colors.white.withValues(alpha: 0.6),
-            fontSize: 12,
-            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+            fontSize: 11,
+            letterSpacing: 0.5,
+            fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
           ),
         ),
       ),

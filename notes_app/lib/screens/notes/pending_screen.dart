@@ -599,28 +599,31 @@ class _CategoryDropdown extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.25), width: 1.8),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<int?>(
           value: selectedId,
           isExpanded: true,
           dropdownColor: const Color(0xFF1E2456),
-          hint: Text('Sin categoría',
-              style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 13)),
-          style: const TextStyle(color: Colors.white, fontSize: 13),
+          hint: Text('SIN CATEGORÍA',
+              style: TextStyle(color: Colors.white.withValues(alpha: 0.4),
+                  fontSize: 12, letterSpacing: 0.5)),
+          style: const TextStyle(color: Colors.white, fontSize: 12, letterSpacing: 0.5),
           icon: Icon(Icons.keyboard_arrow_down_rounded,
               color: Colors.white.withValues(alpha: 0.4)),
           items: [
-            const DropdownMenuItem<int?>(
+            DropdownMenuItem<int?>(
               value: null,
-              child: Text('Sin categoría',
-                  style: TextStyle(color: Colors.white60, fontSize: 13)),
+              child: Text('SIN CATEGORÍA',
+                  style: TextStyle(color: Colors.white.withValues(alpha: 0.5),
+                      fontSize: 12, letterSpacing: 0.5)),
             ),
             ...categories.map((cat) => DropdownMenuItem<int?>(
               value: int.tryParse(cat.id),
-              child: Text(cat.name,
-                  style: const TextStyle(color: Colors.white, fontSize: 13)),
+              child: Text(cat.name.toUpperCase(),
+                  style: const TextStyle(color: Colors.white,
+                      fontSize: 12, letterSpacing: 0.5, fontWeight: FontWeight.w600)),
             )),
           ],
           onChanged: onChanged,

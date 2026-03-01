@@ -279,8 +279,8 @@ class _FilterChip extends StatelessWidget {
           color: isActive ? color.withValues(alpha: 0.85) : color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isActive ? color : color.withValues(alpha: 0.35),
-            width: 1.2,
+            color: isActive ? color : color.withValues(alpha: 0.45),
+            width: 1.8,
           ),
         ),
         child: Row(
@@ -289,11 +289,12 @@ class _FilterChip extends StatelessWidget {
             Icon(icon, size: 12, color: isActive ? Colors.white : color),
             const SizedBox(width: 5),
             Text(
-              label,
+              label.toUpperCase(),
               style: TextStyle(
                 color: isActive ? Colors.white : color,
-                fontSize: 11,
-                fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+                fontSize: 10,
+                letterSpacing: 0.5,
+                fontWeight: isActive ? FontWeight.w800 : FontWeight.w600,
               ),
             ),
           ],
@@ -612,7 +613,7 @@ class _FolderCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: _kSurface,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: _accent.withValues(alpha: 0.25), width: 1.5),
+          border: Border.all(color: _accent.withValues(alpha: 0.35), width: 2.2),
           boxShadow: [
             BoxShadow(
                 color: _accent.withValues(alpha: 0.08),
@@ -633,13 +634,14 @@ class _FolderCard extends StatelessWidget {
                 child: Icon(_icon, color: _accent, size: 24),
               ),
               const Spacer(),
-              Text(folder.label,
+              Text(folder.label.toUpperCase(),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                       color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                      letterSpacing: 0.6,
                       height: 1.3)),
               const SizedBox(height: 6),
               Row(
@@ -688,11 +690,12 @@ class _FolderDetailScreen extends StatelessWidget {
         backgroundColor: _kBg,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
-        title: Text(folder.label,
+        title: Text(folder.label.toUpperCase(),
             style: const TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.w700,
-                fontSize: 18)),
+                fontSize: 16,
+                letterSpacing: 0.6)),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
           child: Divider(
