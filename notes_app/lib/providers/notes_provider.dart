@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../models/index.dart';
 import '../services/index.dart';
 
@@ -83,9 +83,14 @@ class NotesProvider extends ChangeNotifier {
         size: 200,
       );
       final items = result['items'] as List<dynamic>? ?? [];
-      _notes = items
+      final all = items
           .map((e) => Note.fromCaptureJson(e as Map<String, dynamic>))
           .toList();
+      // El back solo filtra por APPROVED cuando se pasa categoryId.
+      // Sin categoryId devuelve todo → filtramos aquí para mostrar solo aprobadas.
+      _notes = _activeCategoryId != null
+          ? all
+          : all.where((n) => n.categoryStatus == CategoryStatus.approved).toList();
       _error = null;
     } catch (e) {
       _error = e.toString();

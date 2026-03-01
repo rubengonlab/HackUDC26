@@ -36,6 +36,9 @@ public class AzureVisionOcrService {
     private long timeoutSeconds;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private final HttpClient client = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(10))
+            .build();
 
     public Optional<String> extractText(byte[] imageBytes) {
         if (imageBytes == null || imageBytes.length == 0) {
@@ -50,11 +53,8 @@ public class AzureVisionOcrService {
         try {
             String normalizedEndpoint = endpoint.endsWith("/") ? endpoint.substring(0, endpoint.length() - 1) : endpoint;
             String queryLanguage = URLEncoder.encode(language, StandardCharsets.UTF_8);
-            URI uri = URI.create(normalizedEndpoint + "/vision/v4.0/ocr?language=" + queryLanguage + "&detectOrientation=true");
-
-            HttpClient client = HttpClient.newBuilder()
-                    .connectTimeout(Duration.ofSeconds(10))
-                    .build();
+            
+            URI uri = URI.create(normalizedEndpoint + "/computervision/imageanalysis:analyze?api-version=2024-02-01&features=read&language=" + queryLanguage);
 
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(uri)
@@ -65,9 +65,9 @@ public class AzureVisionOcrService {
                     .build();
 
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-            logger.error(response.toString());
+            
             if (response.statusCode() < 200 || response.statusCode() >= 300) {
-                logger.warn("Azure Vision OCR devolvio HTTP {}: {}", response.statusCode(), response.body());
+                logger.error("Azure Vision OCR devolvio HTTP {}: {}", response.statusCode(), response.body());
                 return Optional.empty();
             }
 
@@ -90,41 +90,24 @@ public class AzureVisionOcrService {
 
     private String parseOcrText(String responseBody) throws IOException {
         JsonNode root = objectMapper.readTree(responseBody);
-        JsonNode regions = root.get("regions");
-        if (regions == null || !regions.isArray()) {
+        JsonNode readResult = root.get("readResult");
+        if (readResult == null) {
             return "";
         }
 
         StringBuilder textBuilder = new StringBuilder();
-        for (JsonNode region : regions) {
-            JsonNode lines = region.get("lines");
-            if (lines == null || !lines.isArray()) {
-                continue;
-            }
-
-            for (JsonNode line : lines) {
-                JsonNode words = line.get("words");
-                if (words == null || !words.isArray()) {
-                    continue;
-                }
-
-                StringBuilder lineBuilder = new StringBuilder();
-                for (JsonNode word : words) {
-                    String token = word.path("text").asText("").trim();
-                    if (token.isEmpty()) {
-                        continue;
+        JsonNode blocks = readResult.get("blocks");
+        
+        if (blocks != null && blocks.isArray()) {
+            for (JsonNode block : blocks) {
+                JsonNode lines = block.get("lines");
+                if (lines != null && lines.isArray()) {
+                    for (JsonNode line : lines) {
+                        String text = line.path("text").asText("").trim();
+                        if (!text.isEmpty()) {
+                            textBuilder.append(text).append("\n");
+                        }
                     }
-                    if (lineBuilder.length() > 0) {
-                        lineBuilder.append(' ');
-                    }
-                    lineBuilder.append(token);
-                }
-
-                if (lineBuilder.length() > 0) {
-                    if (textBuilder.length() > 0) {
-                        textBuilder.append('\n');
-                    }
-                    textBuilder.append(lineBuilder);
                 }
             }
         }

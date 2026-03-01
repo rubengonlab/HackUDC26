@@ -3,7 +3,9 @@ import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../../models/index.dart';
 import '../../providers/index.dart';
+import '../../services/index.dart';
 import '../../widgets/notes/index.dart';
+import 'note_detail_screen.dart';
 
 class NotesScreen extends StatefulWidget {
   const NotesScreen({super.key});
@@ -23,6 +25,23 @@ class _NotesScreenState extends State<NotesScreen> {
       context.read<CategoriesProvider>().loadFromBackend();
       notesProvider.loadNotes();
       notesProvider.loadFilterMetadata();
+
+      // Configurar el handler para shares recibidos mientras la app está abierta
+      ShareHandlerService.onSharedUrl = (url) {
+        if (mounted) showSharedUrlSheet(context, url);
+      };
+      ShareHandlerService.onSharedImage = (file) {
+        if (mounted) showSharedImageSheet(context, file);
+      };
+      ShareHandlerService.init();
+
+      // Comprobar si la app se abrió directamente desde un Share Intent
+      ShareHandlerService.getInitialSharedUrl().then((url) {
+        if (url != null && mounted) showSharedUrlSheet(context, url);
+      });
+      ShareHandlerService.getInitialSharedImage().then((file) {
+        if (file != null && mounted) showSharedImageSheet(context, file);
+      });
     });
   }
 
@@ -670,67 +689,81 @@ class _NoteCard extends StatelessWidget {
   }
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: _kSurface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: accentColor.withValues(alpha: 0.2)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Row(
-          children: [
-            Container(
-              width: 42, height: 42,
-              decoration: BoxDecoration(
-                  color: accentColor.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(11)),
-              child: Center(
-                child: Text(Note.typeEmoji(note.type),
-                    style: const TextStyle(fontSize: 20)),
+    return GestureDetector(
+      onTap: () => Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => NoteDetailScreen(note: note),
+      )),
+      child: Container(
+        decoration: BoxDecoration(
+          color: _kSurface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: accentColor.withValues(alpha: 0.2)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            children: [
+              Container(
+                width: 42, height: 42,
+                decoration: BoxDecoration(
+                    color: accentColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(11)),
+                child: Center(
+                  child: Text(Note.typeEmoji(note.type),
+                      style: const TextStyle(fontSize: 20)),
+                ),
               ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(note.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14)),
-                  const SizedBox(height: 4),
-                  if (note.type == NoteType.audio && note.durationSeconds != null)
-                    Row(children: [
-                      Icon(Icons.graphic_eq_rounded,
-                          size: 13,
-                          color: accentColor.withValues(alpha: 0.7)),
-                      const SizedBox(width: 4),
-                      Text(_formatDuration(note.durationSeconds!),
-                          style: TextStyle(
-                              color: accentColor.withValues(alpha: 0.7),
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600)),
-                    ])
-                  else if (note.preview != null && note.preview!.isNotEmpty)
-                    Text(note.preview!,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(note.title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.45),
-                            fontSize: 12)),
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14)),
+                    const SizedBox(height: 4),
+                    if (note.type == NoteType.audio && note.durationSeconds != null)
+                      Row(children: [
+                        Icon(Icons.graphic_eq_rounded,
+                            size: 13,
+                            color: accentColor.withValues(alpha: 0.7)),
+                        const SizedBox(width: 4),
+                        Text(_formatDuration(note.durationSeconds!),
+                            style: TextStyle(
+                                color: accentColor.withValues(alpha: 0.7),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600)),
+                      ])
+                    else if (note.preview != null && note.preview!.isNotEmpty)
+                      Text(note.preview!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.45),
+                              fontSize: 12)),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(_formatTime(note.createdAt),
+                      style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.3),
+                          fontSize: 10.5)),
+                  const SizedBox(height: 4),
+                  Icon(Icons.chevron_right_rounded,
+                      size: 16, color: Colors.white.withValues(alpha: 0.2)),
                 ],
               ),
-            ),
-            const SizedBox(width: 8),
-            Text(_formatTime(note.createdAt),
-                style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.3),
-                    fontSize: 10.5)),
-          ],
+            ],
+          ),
         ),
       ),
     );

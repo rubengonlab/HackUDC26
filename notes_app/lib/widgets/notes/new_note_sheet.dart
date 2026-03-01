@@ -20,8 +20,32 @@ void showNewNoteSheet(BuildContext context) {
   );
 }
 
+/// Abre directamente el sheet en modo texto con [sharedUrl] prellenado.
+/// Usado cuando el usuario comparte un enlace desde otra app.
+void showSharedUrlSheet(BuildContext context, String sharedUrl) {
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (_) => _NewNoteSheet(initialSharedUrl: sharedUrl),
+  );
+}
+
+/// Abre directamente el sheet en modo imagen con [sharedFile] prellenado.
+/// Usado cuando el usuario comparte una imagen desde la galería u otra app.
+void showSharedImageSheet(BuildContext context, File sharedFile) {
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (_) => _NewNoteSheet(initialSharedImage: sharedFile),
+  );
+}
+
 class _NewNoteSheet extends StatefulWidget {
-  const _NewNoteSheet();
+  const _NewNoteSheet({this.initialSharedUrl, this.initialSharedImage});
+  final String? initialSharedUrl;
+  final File? initialSharedImage;
   @override
   State<_NewNoteSheet> createState() => _NewNoteSheetState();
 }
@@ -29,7 +53,19 @@ class _NewNoteSheet extends StatefulWidget {
 enum _SheetMode { picker, text, audio, image }
 
 class _NewNoteSheetState extends State<_NewNoteSheet> {
-  _SheetMode _mode = _SheetMode.picker;
+  late _SheetMode _mode;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialSharedImage != null) {
+      _mode = _SheetMode.image;
+    } else if (widget.initialSharedUrl != null) {
+      _mode = _SheetMode.text;
+    } else {
+      _mode = _SheetMode.picker;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -48,6 +84,7 @@ class _NewNoteSheetState extends State<_NewNoteSheet> {
             key: const ValueKey('text'),
             onBack: () => setState(() => _mode = _SheetMode.picker),
             onSaved: () => Navigator.of(context).pop(),
+            initialContent: widget.initialSharedUrl,
           ),
         _SheetMode.audio => _AudioNoteView(
             key: const ValueKey('audio'),
@@ -58,6 +95,7 @@ class _NewNoteSheetState extends State<_NewNoteSheet> {
             key: const ValueKey('image'),
             onBack: () => setState(() => _mode = _SheetMode.picker),
             onSaved: () => Navigator.of(context).pop(),
+            initialFile: widget.initialSharedImage,
           ),
       },
     );
@@ -207,9 +245,10 @@ class _TypeButton extends StatelessWidget {
 // Vista 2: nota de texto
 // ─────────────────────────────────────────────────────────────────────────────
 class _TextNoteView extends StatefulWidget {
-  const _TextNoteView({super.key, required this.onBack, required this.onSaved});
+  const _TextNoteView({super.key, required this.onBack, required this.onSaved, this.initialContent});
   final VoidCallback onBack;
   final VoidCallback onSaved;
+  final String? initialContent;
   @override
   State<_TextNoteView> createState() => _TextNoteViewState();
 }
@@ -219,10 +258,16 @@ class _TextNoteViewState extends State<_TextNoteView> {
   static const _kPrimary = Color(0xFFFF5856);
 
   final _titleCtrl = TextEditingController();
-  final _contentCtrl = TextEditingController();
+  late final TextEditingController _contentCtrl;
   String? _selectedCategoryId;
   bool _saving = false;
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _contentCtrl = TextEditingController(text: widget.initialContent ?? '');
+  }
 
   @override
   void dispose() {
@@ -700,9 +745,10 @@ class _AudioNoteViewState extends State<_AudioNoteView> {
 // Vista 4: subida de imagen (cámara o galería)
 // ─────────────────────────────────────────────────────────────────────────────
 class _ImageNoteView extends StatefulWidget {
-  const _ImageNoteView({super.key, required this.onBack, required this.onSaved});
+  const _ImageNoteView({super.key, required this.onBack, required this.onSaved, this.initialFile});
   final VoidCallback onBack;
   final VoidCallback onSaved;
+  final File? initialFile;
   @override
   State<_ImageNoteView> createState() => _ImageNoteViewState();
 }
@@ -717,6 +763,14 @@ class _ImageNoteViewState extends State<_ImageNoteView> {
   String? _error;
 
   final _picker = ImagePicker();
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialFile != null) {
+      _pickedFile = widget.initialFile;
+    }
+  }
 
   @override
   void dispose() {

@@ -1,4 +1,4 @@
-﻿import 'package:http/http.dart' as http;
+import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'dart:async' show TimeoutException;
 import 'dart:convert';
@@ -229,6 +229,23 @@ class ApiService {
     } on http.ClientException catch (e) { throw NetworkException('Sin conexión. (${e.message})');
     } on NotFoundException { rethrow; } on ServerException { rethrow;
     } catch (e) { throw NetworkException('Error inesperado: ${e.toString()}'); }
+  }
+  // GET /captures/pending-category
+  static Future<Map<String, dynamic>> getPendingCaptures({int page = 0, int size = 50}) async {
+    try {
+      final uri = Uri.parse('$_baseUrl/captures/pending-category')
+          .replace(queryParameters: {'page': '$page', 'size': '$size'});
+      final response = await http.get(uri).timeout(_kTimeout);
+      if (response.statusCode == 200) {
+        final decoded = _safeDecodeBody(response);
+        if (decoded is Map<String, dynamic>) return decoded;
+        throw ServerException('Formato de respuesta inesperado.');
+      } else {
+        throw ServerException('Error al obtener capturas pendientes (código ${response.statusCode}).');
+      }
+    } on TimeoutException { throw NetworkException('La conexión tardó demasiado.');
+    } on http.ClientException catch (e) { throw NetworkException('Sin conexión. (${e.message})');
+    } on ServerException { rethrow; } catch (e) { throw NetworkException('Error inesperado: ${e.toString()}'); }
   }
   // Utilidad: infiere MIME type desde la extensión del archivo
   static String _mimeTypeFromPath(String path, {required String defaultMime}) {
