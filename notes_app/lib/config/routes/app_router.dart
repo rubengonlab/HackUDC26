@@ -1,3 +1,7 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2026 Rubén González Laballós
+ * SPDX-License-Identifier: MIT
+ */
 import 'package:go_router/go_router.dart';
 import '../../providers/auth_provider.dart';
 import '../../screens/auth/login_screen.dart';

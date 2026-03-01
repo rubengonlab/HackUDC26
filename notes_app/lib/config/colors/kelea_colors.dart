@@ -1,3 +1,7 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2026 Rubén González Laballós
+ * SPDX-License-Identifier: MIT
+ */
 // Constantes de Colores Kelea para usar en la aplicación
 // Coloca este archivo en lib/config/colors/kelea_colors.dart
 

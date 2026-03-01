@@ -1,3 +1,7 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2026 Rubén González Laballós
+ * SPDX-License-Identifier: MIT
+ */
 enum NoteType { audio, text, image, link, document }
 
 enum CategoryStatus { uncategorized, pending, approved }

@@ -1,3 +1,6 @@
+-- SPDX-FileCopyrightText: Copyright (c) 2026 Rubén González Laballós
+-- SPDX-License-Identifier: MIT
+
 INSERT INTO category (id, name) VALUES (1, 'Personal');
 INSERT INTO category (id, name) VALUES (2, 'Trabajo');
 INSERT INTO category (id, name) VALUES (3, 'Ideas');

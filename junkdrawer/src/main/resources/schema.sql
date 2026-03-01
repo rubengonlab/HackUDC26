@@ -1,3 +1,6 @@
+-- SPDX-FileCopyrightText: Copyright (c) 2026 Rubén González Laballós
+-- SPDX-License-Identifier: MIT
+
 DROP TABLE IF EXISTS Document;
 DROP TABLE IF EXISTS Image;
 DROP TABLE IF EXISTS Audio;

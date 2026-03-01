@@ -1,3 +1,7 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2026 Rubén González Laballós
+ * SPDX-License-Identifier: MIT
+ */
 const pantallaLogin = document.getElementById('pantallaLogin');
 const pantallaApp = document.getElementById('pantallaApp');
 const estadoDiv = document.getElementById('estado');

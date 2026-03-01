@@ -1,3 +1,7 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2026 Rubén González Laballós
+ * SPDX-License-Identifier: MIT
+ */
 document.getElementById('btnPermitir').addEventListener('click', async () => {
   const mensajeDiv = document.getElementById('mensaje');
   

@@ -1,3 +1,7 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2026 Rubén González Laballós
+ * SPDX-License-Identifier: MIT
+ */
 import 'dart:async';
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';

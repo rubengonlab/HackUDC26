@@ -1,3 +1,7 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2026 Rubén González Laballós
+ * SPDX-License-Identifier: MIT
+ */
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({
     id: "enviar-cerebro",
