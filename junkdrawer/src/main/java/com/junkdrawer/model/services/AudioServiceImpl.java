@@ -57,12 +57,18 @@ public class AudioServiceImpl implements AudioService {
     private String uploadBasePath;
 
     @Override
-    public Audio create(MultipartFile file, String contextText) throws InstanceNotFoundException {
+    public Audio create(MultipartFile file, String contextText, Long categoryId) throws InstanceNotFoundException {
         validateAudioFile(file);
+
+        Category selectedCategory = null;
+        if (categoryId != null) {
+            selectedCategory = permissionChecker.checkCategoryExists(categoryId);
+        }
 
         Capture capture = new Capture();
         capture.setCaptureType(Capture.CaptureType.AUDIO);
-        capture.setCategoryStatus(Capture.CategoryStatus.PENDING);
+        capture.setCategoryStatus(selectedCategory != null ? Capture.CategoryStatus.APPROVED : Capture.CategoryStatus.PENDING);
+        capture.setCategory(selectedCategory);
         capture.setContextText(contextText);
         capture = captureDao.save(capture);
 
@@ -87,7 +93,7 @@ public class AudioServiceImpl implements AudioService {
         audio.setTextStatus(Audio.TextStatus.PENDING);
         audio = audioDao.save(audio);
 
-        processSuggestedCategoryAndTitleFromAudio(capture, audio, destination);
+        processSuggestedCategoryAndTitleFromAudio(capture, audio, destination, contextText, selectedCategory != null);
         return audio;
     }
 
@@ -128,7 +134,8 @@ public class AudioServiceImpl implements AudioService {
         return new Block<>(slice.getContent(), slice.hasNext());
     }
 
-    private void processSuggestedCategoryAndTitleFromAudio(Capture capture, Audio audio, Path audioPath) {
+    private void processSuggestedCategoryAndTitleFromAudio(Capture capture, Audio audio, Path audioPath, String contextText,
+            boolean hasUserCategory) {
         List<Category> allCategories = categoryDao.findAllByOrderByNameAsc();
         if (allCategories.isEmpty()) {
             capture.setCategoryStatus(Capture.CategoryStatus.UNCATEGORIZED);
@@ -158,8 +165,9 @@ public class AudioServiceImpl implements AudioService {
                 return;
             }
 
+            String textForModel = buildTextForModel(parsedText, contextText);
             BedrockNovaService.AudioAiProcessingResult aiResult = bedrockNovaService
-                    .procesarTranscripcionAudio(categoryNames, parsedText);
+                    .procesarTranscripcionAudio(categoryNames, textForModel);
 
             if (aiResult.reorderedText() != null && !aiResult.reorderedText().isBlank()) {
                 audio.setReorderedParsedText(aiResult.reorderedText().trim());
@@ -170,7 +178,7 @@ public class AudioServiceImpl implements AudioService {
             }
             audioDao.save(audio);
 
-            applyCategoryAndTitle(capture, allCategories, aiResult.category(), aiResult.title());
+            applyCategoryAndTitle(capture, allCategories, aiResult.category(), aiResult.title(), hasUserCategory);
         } catch (Exception exception) {
             audio.setTextStatus(Audio.TextStatus.FAILED);
             audioDao.save(audio);
@@ -181,10 +189,15 @@ public class AudioServiceImpl implements AudioService {
     }
 
     private void applyCategoryAndTitle(Capture capture, List<Category> allCategories,
-            String predictedCategory, String title) {
+            String predictedCategory, String title, boolean hasUserCategory) {
 
         if (title != null && !title.isBlank()) {
             capture.setTitle(title.trim());
+        }
+
+        if (hasUserCategory) {
+            captureDao.save(capture);
+            return;
         }
 
         if (predictedCategory == null || predictedCategory.isBlank()
@@ -228,5 +241,19 @@ public class AudioServiceImpl implements AudioService {
             }
         }
         return UUID.randomUUID() + extension;
+    }
+
+    private String buildTextForModel(String parsedText, String contextText) {
+        String normalizedParsed = parsedText != null ? parsedText.trim() : "";
+        String normalizedContext = contextText != null ? contextText.trim() : "";
+
+        if (normalizedContext.isBlank()) {
+            return normalizedParsed;
+        }
+        if (normalizedParsed.isBlank()) {
+            return normalizedContext;
+        }
+
+        return normalizedParsed + "\n\nContexto:\n" + normalizedContext;
     }
 }

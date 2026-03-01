@@ -60,9 +60,10 @@ public class AudioController {
     @ResponseStatus(HttpStatus.CREATED)
     public AudioDto create(
             @RequestPart MultipartFile file,
-            @RequestParam(required = false) String contextText) throws InstanceNotFoundException {
+            @RequestParam(required = false) String contextText,
+            @RequestParam(required = false) Long categoryId) throws InstanceNotFoundException {
 
-        Audio audio = audioService.create(file, contextText);
+        Audio audio = audioService.create(file, contextText, categoryId);
         return audioConversor.toAudioDto(audio, buildContentUrl(audio.getId()));
     }
 

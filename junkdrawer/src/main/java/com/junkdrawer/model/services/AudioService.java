@@ -7,7 +7,7 @@ import com.junkdrawer.model.entities.Audio;
 
 public interface AudioService {
 
-    Audio create(MultipartFile file, String contextText) throws InstanceNotFoundException;
+    Audio create(MultipartFile file, String contextText, Long categoryId) throws InstanceNotFoundException;
 
     Audio update(Long id, String contextText) throws InstanceNotFoundException;
 

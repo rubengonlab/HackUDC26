@@ -43,11 +43,18 @@ public class NoteServiceImpl implements NoteService {
     private BedrockNovaService bedrockNovaService;
 
     @Override
-    public Note createNoteResource(String content, String contextText)
+    public Note createNoteResource(String content, String contextText, Long categoryId)
             throws InstanceNotFoundException {
+
+        Category selectedCategory = null;
+        if (categoryId != null) {
+            selectedCategory = permissionChecker.checkCategoryExists(categoryId);
+        }
+
         Capture capture = new Capture();
         capture.setCaptureType(Capture.CaptureType.NOTE);
-        capture.setCategoryStatus(Capture.CategoryStatus.PENDING);
+        capture.setCategoryStatus(selectedCategory != null ? Capture.CategoryStatus.APPROVED : Capture.CategoryStatus.PENDING);
+        capture.setCategory(selectedCategory);
         capture.setContextText(contextText);
         capture = captureDao.save(capture);
 
@@ -57,12 +64,13 @@ public class NoteServiceImpl implements NoteService {
         note.setTextStatus(Note.TextStatus.PENDING);
 
         note = noteDao.save(note);
-        applySuggestedCategoryAndReorderedText(capture, note, content);
+        applySuggestedCategoryAndReorderedText(capture, note, content, contextText, selectedCategory != null);
 
         return note;
     }
 
-    private void applySuggestedCategoryAndReorderedText(Capture capture, Note note, String noteText) {
+    private void applySuggestedCategoryAndReorderedText(Capture capture, Note note, String noteText, String contextText,
+            boolean hasUserCategory) {
         List<Category> allCategories = categoryDao.findAllByOrderByNameAsc();
         if (allCategories.isEmpty()) {
             capture.setCategoryStatus(Capture.CategoryStatus.UNCATEGORIZED);
@@ -76,8 +84,10 @@ public class NoteServiceImpl implements NoteService {
                 .map(Category::getName)
                 .collect(Collectors.toList());
 
+        String textForModel = buildTextForModel(noteText, contextText);
+
         try {
-            BedrockNovaService.NoteAiProcessingResult aiResult = bedrockNovaService.procesarNota(categoryNames, noteText);
+            BedrockNovaService.NoteAiProcessingResult aiResult = bedrockNovaService.procesarNota(categoryNames, textForModel);
             if (aiResult.title() != null && !aiResult.title().isBlank()) {
                 capture.setTitle(aiResult.title().trim());
             }
@@ -89,6 +99,11 @@ public class NoteServiceImpl implements NoteService {
                 note.setTextStatus(Note.TextStatus.FAILED);
             }
             noteDao.save(note);
+
+            if (hasUserCategory) {
+                captureDao.save(capture);
+                return;
+            }
 
             String predictedCategory = aiResult.category();
             if (predictedCategory == null || predictedCategory.isBlank()) {
@@ -122,6 +137,20 @@ public class NoteServiceImpl implements NoteService {
             noteDao.save(note);
             logger.warn("No se pudo clasificar automáticamente la nota: {}", e.getMessage());
         }
+    }
+
+    private String buildTextForModel(String content, String contextText) {
+        String normalizedContent = content != null ? content.trim() : "";
+        String normalizedContext = contextText != null ? contextText.trim() : "";
+
+        if (normalizedContext.isBlank()) {
+            return normalizedContent;
+        }
+        if (normalizedContent.isBlank()) {
+            return normalizedContext;
+        }
+
+        return normalizedContent + "\n\nContexto:\n" + normalizedContext;
     }
 
     @Override

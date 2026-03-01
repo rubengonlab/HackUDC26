@@ -5,7 +5,7 @@ import com.junkdrawer.model.entities.Note;
 
 public interface NoteService {
 
-    Note createNoteResource(String content, String contextText)
+    Note createNoteResource(String content, String contextText, Long categoryId)
             throws InstanceNotFoundException;
 
     Note createNote(String text, Long captureId) throws InstanceNotFoundException;

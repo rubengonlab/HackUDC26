@@ -6,6 +6,6 @@ import com.junkdrawer.model.entities.Link;
 
 public interface LinkService {
 
-    Link createLinkResource(String url, String contextText)
+    Link createLinkResource(String url, String contextText, Long categoryId)
             throws DuplicateInstanceException, InstanceNotFoundException;
 }

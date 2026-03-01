@@ -60,9 +60,10 @@ public class ImageController {
     @ResponseStatus(HttpStatus.CREATED)
     public ImageDto create(
             @RequestPart MultipartFile file,
-            @RequestParam(required = false) String contextText) throws InstanceNotFoundException {
+            @RequestParam(required = false) String contextText,
+            @RequestParam(required = false) Long categoryId) throws InstanceNotFoundException {
 
-        Image image = imageService.create(file, contextText);
+        Image image = imageService.create(file, contextText, categoryId);
         return imageConversor.toImageDto(image, buildContentUrl(image.getId()));
     }
 

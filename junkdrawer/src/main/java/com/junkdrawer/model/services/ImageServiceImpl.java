@@ -64,12 +64,18 @@ public class ImageServiceImpl implements ImageService {
     private long maxImageSizeBytes;
 
     @Override
-    public Image create(MultipartFile file, String contextText) throws InstanceNotFoundException {
+    public Image create(MultipartFile file, String contextText, Long categoryId) throws InstanceNotFoundException {
         ValidatedImage validatedImage = validateAndReadImage(file);
+
+        Category selectedCategory = null;
+        if (categoryId != null) {
+            selectedCategory = permissionChecker.checkCategoryExists(categoryId);
+        }
 
         Capture capture = new Capture();
         capture.setCaptureType(Capture.CaptureType.IMAGE);
-        capture.setCategoryStatus(Capture.CategoryStatus.PENDING);
+        capture.setCategoryStatus(selectedCategory != null ? Capture.CategoryStatus.APPROVED : Capture.CategoryStatus.PENDING);
+        capture.setCategory(selectedCategory);
         capture.setContextText(contextText);
         capture = captureDao.save(capture);
 
@@ -94,7 +100,7 @@ public class ImageServiceImpl implements ImageService {
         image.setTextStatus(Image.TextStatus.PENDING);
         image = imageDao.save(image);
 
-        processImageTextAndCategory(capture, image, validatedImage.bytes(), contextText);
+        processImageTextAndCategory(capture, image, validatedImage.bytes(), contextText, selectedCategory != null);
         return image;
     }
 
@@ -135,7 +141,8 @@ public class ImageServiceImpl implements ImageService {
         return new Block<>(slice.getContent(), slice.hasNext());
     }
 
-    private void processImageTextAndCategory(Capture capture, Image image, byte[] imageBytes, String contextText) {
+    private void processImageTextAndCategory(Capture capture, Image image, byte[] imageBytes, String contextText,
+            boolean hasUserCategory) {
         List<Category> allCategories = categoryDao.findAllByOrderByNameAsc();
         if (allCategories.isEmpty()) {
             capture.setCategoryStatus(Capture.CategoryStatus.UNCATEGORIZED);
@@ -166,7 +173,8 @@ public class ImageServiceImpl implements ImageService {
                 return;
             }
 
-            BedrockNovaService.NoteAiProcessingResult aiResult = bedrockNovaService.procesarNota(categoryNames, parsedText);
+            String textForModel = buildTextForModel(parsedText, contextText);
+            BedrockNovaService.NoteAiProcessingResult aiResult = bedrockNovaService.procesarNota(categoryNames, textForModel);
 
             if (aiResult.reorderedText() != null && !aiResult.reorderedText().isBlank()) {
                 image.setReorderedParsedText(aiResult.reorderedText().trim());
@@ -179,6 +187,11 @@ public class ImageServiceImpl implements ImageService {
 
             if (aiResult.title() != null && !aiResult.title().isBlank()) {
                 capture.setTitle(aiResult.title().trim());
+            }
+
+            if (hasUserCategory) {
+                captureDao.save(capture);
+                return;
             }
 
             String predictedCategory = aiResult.category();
@@ -215,6 +228,20 @@ public class ImageServiceImpl implements ImageService {
             return "";
         }
         return contextText.trim();
+    }
+
+    private String buildTextForModel(String parsedText, String contextText) {
+        String normalizedParsed = parsedText != null ? parsedText.trim() : "";
+        String normalizedContext = normalizeContext(contextText);
+
+        if (normalizedContext.isBlank()) {
+            return normalizedParsed;
+        }
+        if (normalizedParsed.isBlank()) {
+            return normalizedContext;
+        }
+
+        return normalizedParsed + "\n\nContexto:\n" + normalizedContext;
     }
 
     private ValidatedImage validateAndReadImage(MultipartFile file) {

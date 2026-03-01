@@ -41,8 +41,11 @@ public class LinkServiceImpl implements LinkService {
     @Autowired
     private BedrockNovaService bedrockNovaService;
 
+    @Autowired
+    private PermissionChecker permissionChecker;
+
     @Override
-    public Link createLinkResource(String url, String contextText)
+    public Link createLinkResource(String url, String contextText, Long categoryId)
             throws DuplicateInstanceException, InstanceNotFoundException {
 
         Optional<Link> optionalLink = linkDao.findByUrl(url);
@@ -50,11 +53,17 @@ public class LinkServiceImpl implements LinkService {
             throw new DuplicateInstanceException("project.entities.link", url);
         }
 
+        Category selectedCategory = null;
+        if (categoryId != null) {
+            selectedCategory = permissionChecker.checkCategoryExists(categoryId);
+        }
+
         String origin = detectOrigin(url);
 
         Capture capture = new Capture();
         capture.setCaptureType(Capture.CaptureType.LINK);
-        capture.setCategoryStatus(Capture.CategoryStatus.PENDING);
+        capture.setCategoryStatus(selectedCategory != null ? Capture.CategoryStatus.APPROVED : Capture.CategoryStatus.PENDING);
+        capture.setCategory(selectedCategory);
         capture.setContextText(contextText);
         capture.setOrigin(origin);
         capture = captureDao.save(capture);
@@ -66,7 +75,7 @@ public class LinkServiceImpl implements LinkService {
 
         link = linkDao.save(link);
 
-        applySuggestedCategoryAndTitle(capture, buildTextForClassification(url, contextText));
+        applySuggestedCategoryAndTitle(capture, buildTextForClassification(url, contextText), selectedCategory != null);
         return link;
     }
 
@@ -107,7 +116,7 @@ public class LinkServiceImpl implements LinkService {
         return "URL: " + url;
     }
 
-    private void applySuggestedCategoryAndTitle(Capture capture, String textToClassify) {
+    private void applySuggestedCategoryAndTitle(Capture capture, String textToClassify, boolean hasUserCategory) {
         List<Category> allCategories = categoryDao.findAllByOrderByNameAsc();
         if (allCategories.isEmpty() || textToClassify.isBlank()) {
             capture.setCategoryStatus(Capture.CategoryStatus.UNCATEGORIZED);
@@ -123,6 +132,11 @@ public class LinkServiceImpl implements LinkService {
             BedrockNovaService.AiProcessingResult aiResult = bedrockNovaService.procesarTexto(categoryNames, textToClassify);
             if (aiResult.title() != null && !aiResult.title().isBlank()) {
                 capture.setTitle(aiResult.title().trim());
+            }
+
+            if (hasUserCategory) {
+                captureDao.save(capture);
+                return;
             }
 
             String predictedCategory = aiResult.category();

@@ -13,6 +13,9 @@ public class CreateTextResourceParamsDto {
     @Schema(description = "Contexto adicional opcional", example = "Referencia de documentacion")
     private String contextText;
 
+    @Schema(description = "Id de categoria opcional. Si se envía, se aprueba directamente", example = "2")
+    private Long categoryId;
+
     public CreateTextResourceParamsDto() {
     }
 
@@ -30,5 +33,13 @@ public class CreateTextResourceParamsDto {
 
     public void setContextText(String contextText) {
         this.contextText = contextText;
+    }
+
+    public Long getCategoryId() {
+        return categoryId;
+    }
+
+    public void setCategoryId(Long categoryId) {
+        this.categoryId = categoryId;
     }
 }

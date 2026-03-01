@@ -75,13 +75,14 @@ public class TextController {
             throws DuplicateInstanceException, InstanceNotFoundException {
 
         if (isValidUrl(params.getContent())) {
-            Link link = linkService.createLinkResource(params.getContent(), params.getContextText());
+            Link link = linkService.createLinkResource(params.getContent(), params.getContextText(), params.getCategoryId());
             return textResourceConversor.toTextResourceDto(link);
         }
 
         Note note = noteService.createNoteResource(
                 params.getContent(),
-                params.getContextText());
+                params.getContextText(),
+                params.getCategoryId());
         return textResourceConversor.toTextResourceDto(note);
     }
 

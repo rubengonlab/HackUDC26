@@ -7,7 +7,7 @@ import com.junkdrawer.model.entities.Image;
 
 public interface ImageService {
 
-    Image create(MultipartFile file, String contextText) throws InstanceNotFoundException;
+    Image create(MultipartFile file, String contextText, Long categoryId) throws InstanceNotFoundException;
 
     Image update(Long id, String contextText) throws InstanceNotFoundException;
 
