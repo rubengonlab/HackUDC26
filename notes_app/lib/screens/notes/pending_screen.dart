@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
 import '../../models/index.dart';
@@ -359,6 +360,15 @@ class _PendingCardState extends State<_PendingCard> {
                     const SizedBox(height: 14),
                   ],
 
+                  // Reproductor si es AUDIO
+                  if (_type == 'AUDIO') ...[
+                    _AudioPlayer(
+                      audioId: widget.json['audio']?['id'],
+                      accent: _accent,
+                    ),
+                    const SizedBox(height: 14),
+                  ],
+
                   // Categoría desplegable
                   _SectionLabel('Categoría', Icons.folder_rounded, _accent),
                   const SizedBox(height: 6),
@@ -696,6 +706,143 @@ class _ToggleChip extends StatelessWidget {
   );
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Reproductor de audio
+// ─────────────────────────────────────────────────────────────────────────────
+class _AudioPlayer extends StatefulWidget {
+  const _AudioPlayer({required this.audioId, required this.accent});
+  final dynamic audioId;
+  final Color accent;
+  @override
+  State<_AudioPlayer> createState() => _AudioPlayerState();
+}
+
+class _AudioPlayerState extends State<_AudioPlayer> {
+  static const _channel = MethodChannel('com.junkdrawer/audio_recorder');
+
+  bool _playing = false;
+  bool _loading = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _channel.setMethodCallHandler((call) async {
+      if (!mounted) return;
+      switch (call.method) {
+        case 'onPlaybackStarted':
+          setState(() { _playing = true; _loading = false; });
+          break;
+        case 'onPlaybackCompleted':
+          setState(() { _playing = false; _loading = false; });
+          break;
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _channel.setMethodCallHandler(null);
+    if (_playing || _loading) {
+      _channel.invokeMethod('stopPlayback').catchError((_) {});
+    }
+    super.dispose();
+  }
+
+  Future<void> _toggle() async {
+    if (_loading) return;
+    if (_playing) {
+      try { await _channel.invokeMethod('stopPlayback'); } catch (_) {}
+      setState(() { _playing = false; _loading = false; });
+      return;
+    }
+    if (widget.audioId == null) {
+      setState(() => _error = 'Audio no disponible');
+      return;
+    }
+    setState(() { _loading = true; _error = null; });
+    try {
+      final url = '$_kBaseUrl/audio/${widget.audioId}/content';
+      await _channel.invokeMethod('playUrl', {'url': url});
+    } on PlatformException catch (e) {
+      if (mounted) setState(() { _loading = false; _error = e.message ?? 'Error al reproducir'; });
+    } catch (e) {
+      if (mounted) setState(() { _loading = false; _error = 'No se pudo reproducir el audio'; });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: widget.accent.withValues(alpha: 0.07),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: widget.accent.withValues(alpha: 0.25), width: 1.5),
+      ),
+      child: Row(
+        children: [
+          // Botón play/stop
+          GestureDetector(
+            onTap: _toggle,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: 44, height: 44,
+              decoration: BoxDecoration(
+                color: _playing
+                    ? widget.accent
+                    : widget.accent.withValues(alpha: 0.18),
+                shape: BoxShape.circle,
+              ),
+              child: _loading
+                  ? Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: CircularProgressIndicator(
+                          color: widget.accent, strokeWidth: 2))
+                  : Icon(
+                      _playing ? Icons.stop_rounded : Icons.play_arrow_rounded,
+                      color: _playing ? Colors.white : widget.accent,
+                      size: 24),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _loading ? 'Descargando audio…' :
+                  _playing ? 'Reproduciendo…'     : 'Escuchar antes de aprobar',
+                  style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.85),
+                      fontWeight: FontWeight.w600, fontSize: 13),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  _loading ? 'Puede tardar unos segundos' :
+                  _playing ? 'Toca para detener'          : 'Toca para reproducir',
+                  style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.4), fontSize: 11),
+                ),
+                if (_error != null) ...[
+                  const SizedBox(height: 3),
+                  Text(_error!,
+                      style: const TextStyle(color: _kPrimary, fontSize: 11)),
+                ],
+              ],
+            ),
+          ),
+          Icon(Icons.mic_rounded,
+              color: widget.accent.withValues(alpha: 0.4), size: 18),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Empty / Error views
+// ─────────────────────────────────────────────────────────────────────────────
 class _EmptyView extends StatelessWidget {
   const _EmptyView();
   @override
