@@ -23,6 +23,9 @@ public class BedrockNovaService {
     public record NoteAiProcessingResult(String category, String title, String reorderedText) {
     }
 
+    public record AudioAiProcessingResult(String category, String title, String reorderedText) {
+    }
+
     private final BedrockRuntimeClient bedrockClient;
     private final ObjectMapper objectMapper;
     private static final String MODEL_ID = "amazon.nova-lite-v1:0";
@@ -66,6 +69,25 @@ public class BedrockNovaService {
         }
 
         return new NoteAiProcessingResult(baseResult.category(), baseResult.title(), reorderedText);
+    }
+
+    public AudioAiProcessingResult procesarTranscripcionAudio(List<String> categories, String text) {
+        String prompt = buildAudioTranscriptPrompt(categories, text);
+        String rawResponse = executePrompt(prompt);
+
+        JsonNode root = parseJsonNode(rawResponse.trim());
+        AiProcessingResult baseResult = extractResponse(rawResponse);
+
+        JsonNode reorderedTextNode = root.get(REORDERED_TEXT_FIELD);
+        String reorderedText = null;
+        if (reorderedTextNode != null && !reorderedTextNode.isNull()) {
+            String parsed = reorderedTextNode.asText().trim();
+            if (!parsed.isEmpty()) {
+                reorderedText = parsed;
+            }
+        }
+
+        return new AudioAiProcessingResult(baseResult.category(), baseResult.title(), reorderedText);
     }
 
     private String executePrompt(String prompt) {
@@ -141,6 +163,35 @@ public class BedrockNovaService {
                 2. Si no encaja, usa "sin_categoria".
                 3. Genera "title" con maximo 7 palabras.
                 4. Genera "reorderedText" bien redactado, claro y estructurado.
+                5. Devuelve SOLO un JSON valido sin texto adicional.
+
+                Formato:
+                {"response":"categoria","title":"titulo","reorderedText":"texto_reordenado"}
+                """.formatted(categoriesJson, text);
+    }
+
+    private String buildAudioTranscriptPrompt(List<String> categories, String text) {
+        String categoriesJson = categories.stream()
+                .map(this::toJsonString)
+                .collect(Collectors.joining(", ", "[", "]"));
+
+        return """
+                Eres un sistema estricto para procesar transcripciones de audio.
+                Debes clasificar el contenido, crear un titulo corto y reescribirlo de forma clara y estructurada.
+
+                <categorias_permitidas>
+                %s
+                </categorias_permitidas>
+
+                <transcripcion_audio>
+                %s
+                </transcripcion_audio>
+
+                Instrucciones obligatorias:
+                1. Clasifica en EXACTAMENTE una categoria permitida.
+                2. Si no encaja, usa "sin_categoria".
+                3. Genera "title" con maximo 7 palabras.
+                4. Genera "reorderedText" con redaccion clara y ordenada.
                 5. Devuelve SOLO un JSON valido sin texto adicional.
 
                 Formato:

@@ -49,12 +49,18 @@ public class AudioDto {
     @Schema(description = "Texto parseado/transcrito del audio. Puede ser nulo si no se pudo transcribir", example = "Recordatorio: enviar acta de la reunion")
     private String parsedText;
 
+    @Schema(description = "Texto transcrito reorganizado por IA", example = "Resumen: Enviar acta de la reunion. Tareas: ...")
+    private String reorderedParsedText;
+
+    @Schema(description = "Estado del procesamiento del texto de audio", example = "PROCESSED")
+    private String textStatus;
+
     public AudioDto() {
     }
 
     public AudioDto(Long id, Long captureId, String fileName, String originalFileName, String mimeType, Long size,
             String storagePath, String contentUrl, LocalDateTime createdAt, String categoryStatus, Long categoryId,
-            String title, String contextText, String parsedText) {
+            String title, String contextText, String parsedText, String reorderedParsedText, String textStatus) {
         this.id = id;
         this.captureId = captureId;
         this.fileName = fileName;
@@ -69,6 +75,8 @@ public class AudioDto {
         this.title = title;
         this.contextText = contextText;
         this.parsedText = parsedText;
+        this.reorderedParsedText = reorderedParsedText;
+        this.textStatus = textStatus;
     }
 
     public Long getId() {
@@ -181,5 +189,21 @@ public class AudioDto {
 
     public void setParsedText(String parsedText) {
         this.parsedText = parsedText;
+    }
+
+    public String getReorderedParsedText() {
+        return reorderedParsedText;
+    }
+
+    public void setReorderedParsedText(String reorderedParsedText) {
+        this.reorderedParsedText = reorderedParsedText;
+    }
+
+    public String getTextStatus() {
+        return textStatus;
+    }
+
+    public void setTextStatus(String textStatus) {
+        this.textStatus = textStatus;
     }
 }

@@ -76,6 +76,8 @@ public class CaptureConversor {
         dto.setStoragePath(audio.getStoragePath());
         dto.setContentUrl("/audio/" + audio.getId() + "/content");
         dto.setParsedText(audio.getParsedText());
+        dto.setReorderedParsedText(audio.getReorderedParsedText());
+        dto.setTextStatus(audio.getTextStatus() != null ? audio.getTextStatus().name() : null);
         return dto;
     }
 

@@ -127,6 +127,8 @@ public class CaptureDto {
         private String storagePath;
         private String contentUrl;
         private String parsedText;
+        private String reorderedParsedText;
+        private String textStatus;
 
         public Long getId() {
             return id;
@@ -190,6 +192,22 @@ public class CaptureDto {
 
         public void setParsedText(String parsedText) {
             this.parsedText = parsedText;
+        }
+
+        public String getReorderedParsedText() {
+            return reorderedParsedText;
+        }
+
+        public void setReorderedParsedText(String reorderedParsedText) {
+            this.reorderedParsedText = reorderedParsedText;
+        }
+
+        public String getTextStatus() {
+            return textStatus;
+        }
+
+        public void setTextStatus(String textStatus) {
+            this.textStatus = textStatus;
         }
     }
 

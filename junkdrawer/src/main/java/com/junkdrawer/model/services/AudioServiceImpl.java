@@ -84,6 +84,7 @@ public class AudioServiceImpl implements AudioService {
         audio.setMimeType(file.getContentType());
         audio.setSize(file.getSize());
         audio.setStoragePath(destination.toString());
+        audio.setTextStatus(Audio.TextStatus.PENDING);
         audio = audioDao.save(audio);
 
         processSuggestedCategoryAndTitleFromAudio(capture, audio, destination);
@@ -146,18 +147,33 @@ public class AudioServiceImpl implements AudioService {
                     .orElse(null);
 
             audio.setParsedText(parsedText);
-            audioDao.save(audio);
 
             if (parsedText == null) {
+                audio.setTextStatus(Audio.TextStatus.FAILED);
+                audio.setReorderedParsedText(null);
+                audioDao.save(audio);
                 capture.setCategoryStatus(Capture.CategoryStatus.UNCATEGORIZED);
                 captureDao.save(capture);
-                logger.warn(" transcripcion disponible; no se puede clasificar por contenido");
+                logger.warn("Audio sin transcripcion disponible; no se puede clasificar por contenido");
                 return;
             }
 
-            BedrockNovaService.AiProcessingResult aiResult = bedrockNovaService.procesarTexto(categoryNames, parsedText);
-            applyCategoryAndTitle(capture, allCategories, aiResult);
+            BedrockNovaService.AudioAiProcessingResult aiResult = bedrockNovaService
+                    .procesarTranscripcionAudio(categoryNames, parsedText);
+
+            if (aiResult.reorderedText() != null && !aiResult.reorderedText().isBlank()) {
+                audio.setReorderedParsedText(aiResult.reorderedText().trim());
+                audio.setTextStatus(Audio.TextStatus.PROCESSED);
+            } else {
+                audio.setReorderedParsedText(null);
+                audio.setTextStatus(Audio.TextStatus.FAILED);
+            }
+            audioDao.save(audio);
+
+            applyCategoryAndTitle(capture, allCategories, aiResult.category(), aiResult.title());
         } catch (Exception exception) {
+            audio.setTextStatus(Audio.TextStatus.FAILED);
+            audioDao.save(audio);
             capture.setCategoryStatus(Capture.CategoryStatus.UNCATEGORIZED);
             captureDao.save(capture);
             logger.warn("No se pudo clasificar automaticamente el audio: {}", exception.getMessage());
@@ -165,13 +181,12 @@ public class AudioServiceImpl implements AudioService {
     }
 
     private void applyCategoryAndTitle(Capture capture, List<Category> allCategories,
-            BedrockNovaService.AiProcessingResult aiResult) {
+            String predictedCategory, String title) {
 
-        if (aiResult.title() != null && !aiResult.title().isBlank()) {
-            capture.setTitle(aiResult.title().trim());
+        if (title != null && !title.isBlank()) {
+            capture.setTitle(title.trim());
         }
 
-        String predictedCategory = aiResult.category();
         if (predictedCategory == null || predictedCategory.isBlank()
                 || NO_CATEGORY.equalsIgnoreCase(predictedCategory.trim())) {
             capture.setCategoryStatus(Capture.CategoryStatus.UNCATEGORIZED);
