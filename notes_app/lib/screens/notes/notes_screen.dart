@@ -6,6 +6,7 @@ import '../../providers/index.dart';
 import '../../services/index.dart';
 import '../../widgets/notes/index.dart';
 import 'note_detail_screen.dart';
+import 'pending_screen.dart';
 
 class NotesScreen extends StatefulWidget {
   const NotesScreen({super.key});
@@ -328,11 +329,32 @@ class _ErrorState extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 // El resto de widgets se mantienen igual
 // ─────────────────────────────────────────────────────────────────────────────
-class _AppHeader extends StatelessWidget {
+class _AppHeader extends StatefulWidget {
   const _AppHeader({required this.username});
   final String username;
-  static const _kBg = Color(0xFF1A1F4D);
+  @override
+  State<_AppHeader> createState() => _AppHeaderState();
+}
+
+class _AppHeaderState extends State<_AppHeader> {
+  static const _kBg      = Color(0xFF1A1F4D);
   static const _kPrimary = Color(0xFFFF5856);
+  int _pendingCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPendingCount();
+  }
+
+  Future<void> _loadPendingCount() async {
+    try {
+      final result = await ApiService.getPendingCaptures(size: 100);
+      final items = result['items'] as List<dynamic>? ?? [];
+      if (mounted) setState(() => _pendingCount = items.length);
+    } catch (_) {}
+  }
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -343,16 +365,13 @@ class _AppHeader extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Hola, $username',
+                Text('Hola, ${widget.username}',
                     style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 22,
-                        fontWeight: FontWeight.w700)),
+                        color: Colors.white, fontSize: 22, fontWeight: FontWeight.w700)),
                 const SizedBox(height: 2),
                 Text('Tus notas organizadas',
                     style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.5),
-                        fontSize: 13)),
+                        color: Colors.white.withValues(alpha: 0.5), fontSize: 13)),
               ],
             ),
           ),
@@ -360,24 +379,30 @@ class _AppHeader extends StatelessWidget {
             clipBehavior: Clip.none,
             children: [
               IconButton(
-                onPressed: () {},
-                icon: const Icon(Icons.notifications_outlined,
-                    color: Colors.white, size: 26),
-                tooltip: 'Notificaciones',
+                onPressed: () => Navigator.of(context)
+                    .push(MaterialPageRoute(builder: (_) => const PendingScreen()))
+                    .then((_) => _loadPendingCount()),
+                icon: const Icon(Icons.notifications_outlined, color: Colors.white, size: 26),
+                tooltip: 'Pendientes de aprobar',
               ),
-              Positioned(
-                top: 8,
-                right: 8,
-                child: Container(
-                  width: 9,
-                  height: 9,
-                  decoration: BoxDecoration(
-                    color: _kPrimary,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: _kBg, width: 1.5),
+              if (_pendingCount > 0)
+                Positioned(
+                  top: 8, right: 8,
+                  child: Container(
+                    width: 16, height: 16,
+                    decoration: BoxDecoration(
+                        color: _kPrimary,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: _kBg, width: 1.5)),
+                    child: Center(
+                      child: Text(
+                        _pendingCount > 9 ? '9+' : '$_pendingCount',
+                        style: const TextStyle(color: Colors.white, fontSize: 9,
+                            fontWeight: FontWeight.w800),
+                      ),
+                    ),
                   ),
                 ),
-              ),
             ],
           ),
           IconButton(

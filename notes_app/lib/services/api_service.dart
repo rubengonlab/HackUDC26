@@ -247,6 +247,67 @@ class ApiService {
     } on http.ClientException catch (e) { throw NetworkException('Sin conexión. (${e.message})');
     } on ServerException { rethrow; } catch (e) { throw NetworkException('Error inesperado: ${e.toString()}'); }
   }
+
+  // PATCH /captures/{id}
+  static Future<Map<String, dynamic>> patchCapture(
+    int captureId, {
+    int? categoryId,
+    String? title,
+    String? contextText,
+    String? reorderedText,
+  }) async {
+    try {
+      final body = <String, dynamic>{};
+      if (categoryId != null) body['categoryId'] = categoryId;
+      if (title != null) body['title'] = title;
+      if (contextText != null) body['contextText'] = contextText;
+      if (reorderedText != null) body['reorderedText'] = reorderedText;
+      final response = await http
+          .patch(Uri.parse('$_baseUrl/captures/$captureId'),
+              headers: {'Content-Type': 'application/json'},
+              body: jsonEncode(body))
+          .timeout(_kTimeout);
+      if (response.statusCode == 200) {
+        return _safeDecodeBody(response) as Map<String, dynamic>? ?? {};
+      } else if (response.statusCode == 404) {
+        throw NotFoundException('Captura no encontrada.');
+      } else {
+        throw ServerException('Error del servidor (código ${response.statusCode}).');
+      }
+    } on TimeoutException { throw NetworkException('La conexión tardó demasiado.');
+    } on http.ClientException catch (e) { throw NetworkException('Sin conexión. (${e.message})');
+    } on NotFoundException { rethrow; } on ServerException { rethrow;
+    } catch (e) { throw NetworkException('Error inesperado: ${e.toString()}'); }
+  }
+
+  // POST /captures/{id}/approve?target=all|category|text
+  static Future<void> approveCapture(int captureId, {String target = 'all'}) async {
+    try {
+      final uri = Uri.parse('$_baseUrl/captures/$captureId/approve')
+          .replace(queryParameters: {'target': target});
+      final response = await http.post(uri).timeout(_kTimeout);
+      if (response.statusCode != 200) {
+        throw ServerException('Error al aprobar (código ${response.statusCode}).');
+      }
+    } on TimeoutException { throw NetworkException('La conexión tardó demasiado.');
+    } on http.ClientException catch (e) { throw NetworkException('Sin conexión. (${e.message})');
+    } on ServerException { rethrow; } catch (e) { throw NetworkException('Error inesperado: ${e.toString()}'); }
+  }
+
+  // POST /captures/{id}/reject?target=all|category|text
+  static Future<void> rejectCapture(int captureId, {String target = 'all'}) async {
+    try {
+      final uri = Uri.parse('$_baseUrl/captures/$captureId/reject')
+          .replace(queryParameters: {'target': target});
+      final response = await http.post(uri).timeout(_kTimeout);
+      if (response.statusCode != 200) {
+        throw ServerException('Error al rechazar (código ${response.statusCode}).');
+      }
+    } on TimeoutException { throw NetworkException('La conexión tardó demasiado.');
+    } on http.ClientException catch (e) { throw NetworkException('Sin conexión. (${e.message})');
+    } on ServerException { rethrow; } catch (e) { throw NetworkException('Error inesperado: ${e.toString()}'); }
+  }
+
   // Utilidad: infiere MIME type desde la extensión del archivo
   static String _mimeTypeFromPath(String path, {required String defaultMime}) {
     final ext = path.toLowerCase().split('.').last;
