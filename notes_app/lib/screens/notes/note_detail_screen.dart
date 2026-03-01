@@ -144,22 +144,21 @@ class _TextContent extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Texto original (siempre primero y en grande)
-        if (original.isNotEmpty) ...[
-          _SectionLabel(label: 'Contenido original', icon: Icons.notes_rounded, color: accent),
-          const SizedBox(height: 8),
-          _TextBox(text: original, accent: accent),
-          const SizedBox(height: 20),
-        ],
-        // Reformulado por IA: debajo, como referencia secundaria
+        // IA siempre arriba en grande
         if (hasReordered) ...[
-          _SectionLabel(label: 'Reformulado por IA', icon: Icons.auto_awesome_rounded,
-              color: Colors.white.withValues(alpha: 0.4)),
+          _SectionLabel(label: 'Reformulado por IA', icon: Icons.auto_awesome_rounded, color: accent),
           const SizedBox(height: 8),
-          _TextBox(
-              text: note.reorderedText!,
-              accent: Colors.white.withValues(alpha: 0.35),
-              dimmed: true),
+          _TextBox(text: note.reorderedText!, accent: accent),
+          if (original.isNotEmpty) const SizedBox(height: 20),
+        ],
+        // Original siempre abajo en pequeño
+        if (original.isNotEmpty) ...[
+          _SectionLabel(label: 'Contenido original', icon: Icons.notes_rounded,
+              color: hasReordered ? Colors.white.withValues(alpha: 0.4) : accent),
+          const SizedBox(height: 8),
+          _TextBox(text: original,
+              accent: hasReordered ? Colors.white.withValues(alpha: 0.35) : accent,
+              dimmed: hasReordered),
         ],
         if (!hasReordered && original.isEmpty)
           _EmptyContent(accent: accent),
@@ -199,25 +198,21 @@ class _AudioContent extends StatelessWidget {
         ),
         const SizedBox(height: 20),
 
-        // Transcripción original (siempre primera y en grande)
-        if (original.isNotEmpty) ...[
-          _SectionLabel(
-              label: 'Transcripción',
-              icon: Icons.record_voice_over_rounded,
-              color: accent),
-          const SizedBox(height: 8),
-          _TextBox(text: original, accent: accent),
-          const SizedBox(height: 20),
-        ],
-        // Reformulada por IA: debajo, como referencia secundaria
+        // IA siempre arriba en grande
         if (hasReordered) ...[
-          _SectionLabel(label: 'Reformulada por IA', icon: Icons.auto_awesome_rounded,
-              color: Colors.white.withValues(alpha: 0.4)),
+          _SectionLabel(label: 'Reformulada por IA', icon: Icons.auto_awesome_rounded, color: accent),
           const SizedBox(height: 8),
-          _TextBox(
-              text: note.reorderedText!,
-              accent: Colors.white.withValues(alpha: 0.35),
-              dimmed: true),
+          _TextBox(text: note.reorderedText!, accent: accent),
+          if (original.isNotEmpty) const SizedBox(height: 20),
+        ],
+        // Transcripción original siempre abajo en pequeño
+        if (original.isNotEmpty) ...[
+          _SectionLabel(label: 'Transcripción original', icon: Icons.record_voice_over_rounded,
+              color: hasReordered ? Colors.white.withValues(alpha: 0.4) : accent),
+          const SizedBox(height: 8),
+          _TextBox(text: original,
+              accent: hasReordered ? Colors.white.withValues(alpha: 0.35) : accent,
+              dimmed: hasReordered),
         ],
         if (!hasReordered && original.isEmpty)
           _EmptyContent(accent: accent, message: 'Transcripción no disponible todavía'),
@@ -456,21 +451,22 @@ class _DocumentContent extends StatelessWidget {
           _TextBox(text: note.contextText!, accent: accent),
         ],
 
-        // Texto extraído (original primero)
-        if (original.isNotEmpty) ...[
-          const SizedBox(height: 20),
-          _SectionLabel(label: 'Contenido extraído', icon: Icons.text_snippet_rounded, color: accent),
-          const SizedBox(height: 8),
-          _TextBox(text: original, accent: accent),
-        ],
-
-        // Reformulado por IA (secundario)
+        // IA siempre arriba en grande
         if (hasReordered) ...[
           const SizedBox(height: 20),
-          _SectionLabel(label: 'Reformulado por IA', icon: Icons.auto_awesome_rounded,
-              color: Colors.white.withValues(alpha: 0.4)),
+          _SectionLabel(label: 'Reformulado por IA', icon: Icons.auto_awesome_rounded, color: accent),
           const SizedBox(height: 8),
-          _TextBox(text: note.reorderedText!, accent: Colors.white.withValues(alpha: 0.35), dimmed: true),
+          _TextBox(text: note.reorderedText!, accent: accent),
+        ],
+        // Contenido extraído siempre abajo en pequeño
+        if (original.isNotEmpty) ...[
+          const SizedBox(height: 20),
+          _SectionLabel(label: 'Contenido extraído', icon: Icons.text_snippet_rounded,
+              color: hasReordered ? Colors.white.withValues(alpha: 0.4) : accent),
+          const SizedBox(height: 8),
+          _TextBox(text: original,
+              accent: hasReordered ? Colors.white.withValues(alpha: 0.35) : accent,
+              dimmed: hasReordered),
         ],
 
         if (original.isEmpty && !hasReordered && note.contextText == null)

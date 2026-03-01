@@ -2,6 +2,13 @@ enum NoteType { audio, text, image, link, document }
 
 enum CategoryStatus { uncategorized, pending, approved }
 
+/// Estado del procesamiento de texto por la IA.
+/// - pending:   en cola / aún no procesado
+/// - processed: la IA generó un texto reformulado válido  ← mostrar IA en grande
+/// - approved:  el usuario lo aprobó explícitamente
+/// - failed:    la IA no pudo procesar                    ← mostrar original en grande
+enum TextStatus { pending, processed, approved, failed }
+
 class Note {
   final String id;
   final String title;
@@ -12,12 +19,13 @@ class Note {
   final DateTime createdAt;
   final int? durationSeconds;
   final CategoryStatus categoryStatus;
+  final TextStatus textStatus;
 
   // Campos de detalle
-  final String? reorderedText;  // texto reformulado por IA (NOTE, AUDIO)
-  final String? contentUrl;     // URL para obtener binario (IMAGE, AUDIO)
-  final String? url;            // para LINK
-  final String? contextText;    // contexto opcional
+  final String? reorderedText;
+  final String? contentUrl;
+  final String? url;
+  final String? contextText;
 
   Note({
     required this.id,
@@ -29,6 +37,7 @@ class Note {
     required this.createdAt,
     this.durationSeconds,
     this.categoryStatus = CategoryStatus.uncategorized,
+    this.textStatus = TextStatus.pending,
     this.reorderedText,
     this.contentUrl,
     this.url,
@@ -93,6 +102,7 @@ class Note {
     String? reorderedText;
     String? contentUrl;
     String? url;
+    String? rawTextStatus;
     final String? contextText = json['contextText'] as String?;
     final String? categoryName = json['categoryName'] as String?;
 
@@ -105,6 +115,7 @@ class Note {
         preview = audio?['parsedText'] as String?;
         reorderedText = audio?['reorderedParsedText'] as String?;
         contentUrl = audio?['contentUrl'] as String?;
+        rawTextStatus = audio?['textStatus'] as String?;
         break;
       case 'IMAGE':
         type = NoteType.image;
@@ -112,9 +123,9 @@ class Note {
         title = json['title'] as String? ??
             image?['originalFileName'] as String? ?? 'Imagen';
         preview = json['contextText'] as String?;
-        // El backend no incluye contentUrl en FileDataDto, construimos con id
         final imageId = image?['id'];
         contentUrl = imageId != null ? '/image/$imageId/content' : null;
+        rawTextStatus = image?['textStatus'] as String?;
         break;
       case 'LINK':
         type = NoteType.link;
@@ -132,6 +143,7 @@ class Note {
         preview = doc?['parsedText'] as String?;
         reorderedText = doc?['reorderedParsedText'] as String?;
         contentUrl = doc?['contentUrl'] as String?;
+        rawTextStatus = doc?['textStatus'] as String?;
         break;
       default: // NOTE
         type = NoteType.text;
@@ -141,6 +153,7 @@ class Note {
         if (title.isEmpty) title = 'Nota';
         preview = note?['content'] as String?;
         reorderedText = note?['reorderedText'] as String?;
+        rawTextStatus = note?['textStatus'] as String?;
     }
 
     return Note(
@@ -152,6 +165,7 @@ class Note {
       categoryName: categoryName,
       createdAt: DateTime.tryParse(json['createdAt'] ?? '') ?? DateTime.now(),
       categoryStatus: _parseStatus(json['categoryStatus']),
+      textStatus: _parseTextStatus(rawTextStatus),
       reorderedText: reorderedText,
       contentUrl: contentUrl,
       url: url,
@@ -164,6 +178,15 @@ class Note {
       case 'PENDING':   return CategoryStatus.pending;
       case 'APPROVED':  return CategoryStatus.approved;
       default:          return CategoryStatus.uncategorized;
+    }
+  }
+
+  static TextStatus _parseTextStatus(String? s) {
+    switch (s) {
+      case 'PROCESSED': return TextStatus.processed;
+      case 'APPROVED':  return TextStatus.approved;
+      case 'FAILED':    return TextStatus.failed;
+      default:          return TextStatus.pending;
     }
   }
 }
