@@ -46,12 +46,21 @@ public class ImageDto {
     @Schema(description = "Contexto asociado", example = "Foto de pantalla del error")
     private String contextText;
 
+    @Schema(description = "Texto extraido por OCR. Puede ser nulo si no se pudo extraer", example = "Error 500 en la ruta /api/v1")
+    private String parsedText;
+
+    @Schema(description = "Texto OCR reordenado por IA", example = "Incidencia detectada: Error 500 en endpoint /api/v1")
+    private String reorderedParsedText;
+
+    @Schema(description = "Estado del procesamiento del texto OCR", example = "PROCESSED")
+    private String textStatus;
+
     public ImageDto() {
     }
 
     public ImageDto(Long id, Long captureId, String fileName, String originalFileName, String mimeType, Long size,
             String storagePath, String contentUrl, LocalDateTime createdAt, String categoryStatus, Long categoryId,
-            String title, String contextText) {
+            String title, String contextText, String parsedText, String reorderedParsedText, String textStatus) {
         this.id = id;
         this.captureId = captureId;
         this.fileName = fileName;
@@ -65,6 +74,9 @@ public class ImageDto {
         this.categoryId = categoryId;
         this.title = title;
         this.contextText = contextText;
+        this.parsedText = parsedText;
+        this.reorderedParsedText = reorderedParsedText;
+        this.textStatus = textStatus;
     }
 
     public Long getId() {
@@ -169,5 +181,29 @@ public class ImageDto {
 
     public void setContextText(String contextText) {
         this.contextText = contextText;
+    }
+
+    public String getParsedText() {
+        return parsedText;
+    }
+
+    public void setParsedText(String parsedText) {
+        this.parsedText = parsedText;
+    }
+
+    public String getReorderedParsedText() {
+        return reorderedParsedText;
+    }
+
+    public void setReorderedParsedText(String reorderedParsedText) {
+        this.reorderedParsedText = reorderedParsedText;
+    }
+
+    public String getTextStatus() {
+        return textStatus;
+    }
+
+    public void setTextStatus(String textStatus) {
+        this.textStatus = textStatus;
     }
 }

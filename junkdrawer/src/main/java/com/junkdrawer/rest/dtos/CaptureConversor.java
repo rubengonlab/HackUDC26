@@ -89,6 +89,9 @@ public class CaptureConversor {
         dto.setMimeType(image.getMimeType());
         dto.setSize(image.getSize());
         dto.setStoragePath(image.getStoragePath());
+        dto.setParsedText(image.getParsedText());
+        dto.setReorderedParsedText(image.getReorderedParsedText());
+        dto.setTextStatus(image.getTextStatus() != null ? image.getTextStatus().name() : null);
         return dto;
     }
 

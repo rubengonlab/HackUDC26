@@ -67,6 +67,11 @@
 			<artifactId>bedrockruntime</artifactId>
 			<version>2.31.19</version>
 		</dependency>
+		<dependency>
+			<groupId>com.azure</groupId>
+			<artifactId>azure-core</artifactId>
+			<version>1.53.0</version>
+		</dependency>
 
 		<dependency>
 			<groupId>com.h2database</groupId>

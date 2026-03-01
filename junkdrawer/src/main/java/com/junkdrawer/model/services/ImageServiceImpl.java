@@ -54,6 +54,9 @@ public class ImageServiceImpl implements ImageService {
     @Autowired
     private BedrockNovaService bedrockNovaService;
 
+    @Autowired
+    private AzureVisionOcrService azureVisionOcrService;
+
     @Value("${app.upload.base-path:uploads}")
     private String uploadBasePath;
 
@@ -88,9 +91,10 @@ public class ImageServiceImpl implements ImageService {
         image.setMimeType(validatedImage.mimeType());
         image.setSize(file.getSize());
         image.setStoragePath(destination.toString());
+        image.setTextStatus(Image.TextStatus.PENDING);
         image = imageDao.save(image);
 
-        applySuggestedCategoryAndTitle(capture, normalizeContext(contextText));
+        processImageTextAndCategory(capture, image, validatedImage.bytes(), contextText);
         return image;
     }
 
@@ -131,14 +135,13 @@ public class ImageServiceImpl implements ImageService {
         return new Block<>(slice.getContent(), slice.hasNext());
     }
 
-    private void applySuggestedCategoryAndTitle(Capture capture, String textToClassify) {
+    private void processImageTextAndCategory(Capture capture, Image image, byte[] imageBytes, String contextText) {
         List<Category> allCategories = categoryDao.findAllByOrderByNameAsc();
-        if (allCategories.isEmpty() || textToClassify.isBlank()) {
+        if (allCategories.isEmpty()) {
             capture.setCategoryStatus(Capture.CategoryStatus.UNCATEGORIZED);
             captureDao.save(capture);
-            if (textToClassify.isBlank()) {
-                logger.warn("Imagen sin contexto; no se puede clasificar por contenido");
-            }
+            image.setTextStatus(Image.TextStatus.FAILED);
+            imageDao.save(image);
             return;
         }
 
@@ -147,7 +150,33 @@ public class ImageServiceImpl implements ImageService {
                 .collect(Collectors.toList());
 
         try {
-            BedrockNovaService.AiProcessingResult aiResult = bedrockNovaService.procesarTexto(categoryNames, textToClassify);
+            String parsedText = azureVisionOcrService.extractText(imageBytes)
+                    .map(String::trim)
+                    .filter(text -> !text.isBlank())
+                    .orElseGet(() -> normalizeContext(contextText));
+
+            image.setParsedText(parsedText != null && !parsedText.isBlank() ? parsedText : null);
+
+            if (parsedText == null || parsedText.isBlank()) {
+                image.setTextStatus(Image.TextStatus.FAILED);
+                imageDao.save(image);
+                capture.setCategoryStatus(Capture.CategoryStatus.UNCATEGORIZED);
+                captureDao.save(capture);
+                logger.warn("Imagen sin texto OCR ni contexto; no se puede clasificar");
+                return;
+            }
+
+            BedrockNovaService.NoteAiProcessingResult aiResult = bedrockNovaService.procesarNota(categoryNames, parsedText);
+
+            if (aiResult.reorderedText() != null && !aiResult.reorderedText().isBlank()) {
+                image.setReorderedParsedText(aiResult.reorderedText().trim());
+                image.setTextStatus(Image.TextStatus.PROCESSED);
+            } else {
+                image.setReorderedParsedText(null);
+                image.setTextStatus(Image.TextStatus.FAILED);
+            }
+            imageDao.save(image);
+
             if (aiResult.title() != null && !aiResult.title().isBlank()) {
                 capture.setTitle(aiResult.title().trim());
             }
@@ -175,6 +204,8 @@ public class ImageServiceImpl implements ImageService {
         } catch (Exception exception) {
             capture.setCategoryStatus(Capture.CategoryStatus.UNCATEGORIZED);
             captureDao.save(capture);
+            image.setTextStatus(Image.TextStatus.FAILED);
+            imageDao.save(image);
             logger.warn("No se pudo clasificar automaticamente la imagen: {}", exception.getMessage());
         }
     }

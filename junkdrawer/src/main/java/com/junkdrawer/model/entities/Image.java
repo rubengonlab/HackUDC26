@@ -1,15 +1,25 @@
 package com.junkdrawer.model.entities;
 
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.Lob;
 import jakarta.persistence.OneToOne;
 
 @Entity
 public class Image {
+
+    public enum TextStatus {
+        PENDING,
+        PROCESSED,
+        APPROVED,
+        FAILED
+    }
 
     private Long id;
     private Capture capture;
@@ -18,6 +28,9 @@ public class Image {
     private String mimeType;
     private Long size;
     private String storagePath;
+    private String parsedText;
+    private String reorderedParsedText;
+    private TextStatus textStatus = TextStatus.PENDING;
 
     public Image() {
     }
@@ -80,5 +93,32 @@ public class Image {
 
     public void setStoragePath(String storagePath) {
         this.storagePath = storagePath;
+    }
+
+    @Lob
+    public String getParsedText() {
+        return parsedText;
+    }
+
+    public void setParsedText(String parsedText) {
+        this.parsedText = parsedText;
+    }
+
+    @Lob
+    public String getReorderedParsedText() {
+        return reorderedParsedText;
+    }
+
+    public void setReorderedParsedText(String reorderedParsedText) {
+        this.reorderedParsedText = reorderedParsedText;
+    }
+
+    @Enumerated(EnumType.STRING)
+    public TextStatus getTextStatus() {
+        return textStatus;
+    }
+
+    public void setTextStatus(TextStatus textStatus) {
+        this.textStatus = textStatus;
     }
 }

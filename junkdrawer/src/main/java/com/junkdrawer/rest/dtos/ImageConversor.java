@@ -25,7 +25,10 @@ public class ImageConversor {
                 capture.getCategoryStatus().name(),
                 capture.getCategory() != null ? capture.getCategory().getId() : null,
                 capture.getTitle(),
-                capture.getContextText());
+                capture.getContextText(),
+                image.getParsedText(),
+                image.getReorderedParsedText(),
+                image.getTextStatus() != null ? image.getTextStatus().name() : null);
     }
 
     public List<ImageDto> toImageDtos(List<Image> images, java.util.function.Function<Image, String> contentUrlBuilder) {
