@@ -30,11 +30,17 @@ class _NotesScreenState extends State<NotesScreen> {
       ShareHandlerService.onSharedUrl = (url) {
         if (mounted) showSharedUrlSheet(context, url);
       };
+      ShareHandlerService.onSharedImage = (file) {
+        if (mounted) showSharedImageSheet(context, file);
+      };
       ShareHandlerService.init();
 
       // Comprobar si la app se abrió directamente desde un Share Intent
       ShareHandlerService.getInitialSharedUrl().then((url) {
         if (url != null && mounted) showSharedUrlSheet(context, url);
+      });
+      ShareHandlerService.getInitialSharedImage().then((file) {
+        if (file != null && mounted) showSharedImageSheet(context, file);
       });
     });
   }
