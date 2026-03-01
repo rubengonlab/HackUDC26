@@ -29,21 +29,55 @@ class _NotesScreenState extends State<NotesScreen> {
 
       // Configurar el handler para shares recibidos mientras la app está abierta
       ShareHandlerService.onSharedUrl = (url) {
-        if (mounted) showSharedUrlSheet(context, url);
+        if (mounted) showSharedUrlSheet(context, url, onSaved: _onNoteSaved);
       };
       ShareHandlerService.onSharedImage = (file) {
-        if (mounted) showSharedImageSheet(context, file);
+        if (mounted) showSharedImageSheet(context, file, onSaved: _onNoteSaved);
       };
       ShareHandlerService.init();
 
-      // Comprobar si la app se abrió directamente desde un Share Intent
       ShareHandlerService.getInitialSharedUrl().then((url) {
-        if (url != null && mounted) showSharedUrlSheet(context, url);
+        if (url != null && mounted) showSharedUrlSheet(context, url, onSaved: _onNoteSaved);
       });
       ShareHandlerService.getInitialSharedImage().then((file) {
-        if (file != null && mounted) showSharedImageSheet(context, file);
+        if (file != null && mounted) showSharedImageSheet(context, file, onSaved: _onNoteSaved);
       });
     });
+  }
+
+  void _onNoteSaved(bool approved) {
+    // Refrescar badge (con delay si no está aprobado, para esperar procesamiento IA)
+    context.read<NotesProvider>().refreshPendingCount(withDelay: !approved);
+
+    final snackBar = approved
+        ? SnackBar(
+            content: const Row(children: [
+              Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
+              SizedBox(width: 10),
+              Text('Guardado y clasificado',
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+            ]),
+            backgroundColor: const Color(0xFF56C288),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            duration: const Duration(seconds: 3),
+          )
+        : SnackBar(
+            content: const Row(children: [
+              Icon(Icons.schedule_rounded, color: Colors.white, size: 18),
+              SizedBox(width: 10),
+              Text('Añadido · pendiente de revisar',
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+            ]),
+            backgroundColor: const Color(0xFF252B5C),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            duration: const Duration(seconds: 3),
+          );
+
+    ScaffoldMessenger.of(context).showSnackBar(snackBar);
   }
 
   @override
@@ -93,7 +127,7 @@ class _NotesScreenState extends State<NotesScreen> {
         padding: const EdgeInsets.only(bottom: 16),
         child: FloatingActionButton(
           heroTag: 'new_note_fab',
-          onPressed: () => showNewNoteSheet(context),
+          onPressed: () => showNewNoteSheet(context, onSaved: _onNoteSaved),
           backgroundColor: _kPrimary,
           tooltip: 'Nueva nota',
           child: const Icon(Icons.add, color: Colors.white, size: 28),
@@ -327,36 +361,18 @@ class _ErrorState extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// El resto de widgets se mantienen igual
+// Header: campana reactiva vía NotesProvider.pendingCount
 // ─────────────────────────────────────────────────────────────────────────────
-class _AppHeader extends StatefulWidget {
+class _AppHeader extends StatelessWidget {
   const _AppHeader({required this.username});
   final String username;
-  @override
-  State<_AppHeader> createState() => _AppHeaderState();
-}
 
-class _AppHeaderState extends State<_AppHeader> {
   static const _kBg      = Color(0xFF1A1F4D);
   static const _kPrimary = Color(0xFFFF5856);
-  int _pendingCount = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadPendingCount();
-  }
-
-  Future<void> _loadPendingCount() async {
-    try {
-      final result = await ApiService.getPendingCaptures(size: 100);
-      final items = result['items'] as List<dynamic>? ?? [];
-      if (mounted) setState(() => _pendingCount = items.length);
-    } catch (_) {}
-  }
 
   @override
   Widget build(BuildContext context) {
+    final pendingCount = context.select<NotesProvider, int>((p) => p.pendingCount);
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 12, 16, 8),
       child: Row(
@@ -365,7 +381,7 @@ class _AppHeaderState extends State<_AppHeader> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Hola, ${widget.username}',
+                Text('Hola, $username',
                     style: const TextStyle(
                         color: Colors.white, fontSize: 22, fontWeight: FontWeight.w700)),
                 const SizedBox(height: 2),
@@ -379,13 +395,22 @@ class _AppHeaderState extends State<_AppHeader> {
             clipBehavior: Clip.none,
             children: [
               IconButton(
-                onPressed: () => Navigator.of(context)
-                    .push(MaterialPageRoute(builder: (_) => const PendingScreen()))
-                    .then((_) => _loadPendingCount()),
-                icon: const Icon(Icons.notifications_outlined, color: Colors.white, size: 26),
+                onPressed: () {
+                  final provider = context.read<NotesProvider>();
+                  Navigator.of(context)
+                      .push(MaterialPageRoute(builder: (_) => const PendingScreen()))
+                      .then((_) => provider.refreshPendingCount());
+                },
+                icon: Icon(
+                  pendingCount > 0
+                      ? Icons.notifications_rounded
+                      : Icons.notifications_outlined,
+                  color: Colors.white,
+                  size: 26,
+                ),
                 tooltip: 'Pendientes de aprobar',
               ),
-              if (_pendingCount > 0)
+              if (pendingCount > 0)
                 Positioned(
                   top: 8, right: 8,
                   child: Container(
@@ -396,7 +421,7 @@ class _AppHeaderState extends State<_AppHeader> {
                         border: Border.all(color: _kBg, width: 1.5)),
                     child: Center(
                       child: Text(
-                        _pendingCount > 9 ? '9+' : '$_pendingCount',
+                        pendingCount > 9 ? '9+' : '$pendingCount',
                         style: const TextStyle(color: Colors.white, fontSize: 9,
                             fontWeight: FontWeight.w800),
                       ),

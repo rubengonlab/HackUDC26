@@ -48,9 +48,13 @@ class _PendingScreenState extends State<PendingScreen> {
   }
 
   void _removeItem(int captureId) {
-    setState(() => _items.removeWhere(
-        (i) => (i['id'] as int?) == captureId));
-    // Recargar notas en la pantalla principal
+    setState(() => _items.removeWhere((i) {
+      final id = i['id'];
+      if (id == null) return false;
+      if (id is int) return id == captureId;
+      if (id is num) return id.toInt() == captureId;
+      return false;
+    }));
     if (mounted) context.read<NotesProvider>().loadNotes();
   }
 
@@ -81,17 +85,30 @@ class _PendingScreenState extends State<PendingScreen> {
           ? const Center(child: CircularProgressIndicator(color: _kPrimary))
           : _error != null
               ? _ErrorView(message: _error!, onRetry: _load)
-              : _items.isEmpty
-                  ? const _EmptyView()
-                  : ListView.separated(
-                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
-                      itemCount: _items.length,
-                      separatorBuilder: (context, index) => const SizedBox(height: 12),
-                      itemBuilder: (context, i) => _PendingCard(
-                        json: _items[i],
-                        onDone: _removeItem,
-                      ),
-                    ),
+              : RefreshIndicator(
+                  color: _kPrimary,
+                  backgroundColor: _kSurface,
+                  onRefresh: _load,
+                  child: _items.isEmpty
+                      ? ListView(
+                          // Necesario para que pull-to-refresh funcione en lista vacía
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          children: const [
+                            SizedBox(height: 120),
+                            _EmptyView(),
+                          ],
+                        )
+                      : ListView.separated(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
+                          itemCount: _items.length,
+                          separatorBuilder: (context, index) => const SizedBox(height: 12),
+                          itemBuilder: (context, i) => _PendingCard(
+                            json: _items[i],
+                            onDone: _removeItem,
+                          ),
+                        ),
+                ),
     );
   }
 }
@@ -114,17 +131,26 @@ class _PendingCardState extends State<_PendingCard> {
   // Campos editables
   late int? _selectedCategoryId;
   late final TextEditingController _reorderedCtrl;
-  bool _useReordered = true; // true = usar reformulado, false = usar original
+  bool _useReordered = true;
   bool _saving = false;
   String? _error;
   bool _expanded = false;
 
+  /// Casteo seguro: acepta int, num, String o null
+  static int? _toInt(dynamic v) {
+    if (v == null) return null;
+    if (v is int) return v;
+    if (v is num) return v.toInt();
+    if (v is String) return int.tryParse(v);
+    return null;
+  }
+
   @override
   void initState() {
     super.initState();
-    _captureId = widget.json['id'] as int;
+    _captureId = _toInt(widget.json['id']) ?? 0;
     _type = (widget.json['captureType'] as String? ?? 'NOTE').toUpperCase();
-    _selectedCategoryId = widget.json['categoryId'] as int?;
+    _selectedCategoryId = _toInt(widget.json['categoryId']);
 
     final reordered = _extractReorderedText();
     _reorderedCtrl = TextEditingController(text: reordered ?? '');
@@ -138,23 +164,30 @@ class _PendingCardState extends State<_PendingCard> {
   }
 
   // ── Helpers de extracción de datos ──────────────────────────────────────
+
+  /// Texto reformulado por IA según el tipo de captura
   String? _extractReorderedText() {
     switch (_type) {
       case 'NOTE':
         return widget.json['note']?['reorderedText'] as String?;
       case 'AUDIO':
         return widget.json['audio']?['reorderedParsedText'] as String?;
+      case 'IMAGE':
+        return widget.json['image']?['reorderedParsedText'] as String?;
       default:
         return null;
     }
   }
 
+  /// Texto original (transcripción / contenido / URL) según tipo
   String? _extractOriginalText() {
     switch (_type) {
       case 'NOTE':
         return widget.json['note']?['content'] as String?;
       case 'AUDIO':
         return widget.json['audio']?['parsedText'] as String?;
+      case 'IMAGE':
+        return widget.json['image']?['parsedText'] as String?;
       case 'LINK':
         return widget.json['link']?['url'] as String?;
       default:
@@ -169,9 +202,10 @@ class _PendingCardState extends State<_PendingCard> {
       case 'AUDIO': return widget.json['audio']?['originalFileName'] as String? ?? 'Audio';
       case 'IMAGE': return widget.json['image']?['originalFileName'] as String? ?? 'Imagen';
       case 'LINK':  return widget.json['link']?['url'] as String? ?? 'Enlace';
-      case 'NOTE':  return (widget.json['note']?['content'] as String? ?? '').split('\n').first.isNotEmpty
-          ? (widget.json['note']?['content'] as String? ?? '').split('\n').first
-          : 'Nota';
+      case 'NOTE':
+        final content = widget.json['note']?['content'] as String? ?? '';
+        final first = content.split('\n').first;
+        return first.isNotEmpty ? first : 'Nota';
       default: return 'Captura';
     }
   }
@@ -201,29 +235,28 @@ class _PendingCardState extends State<_PendingCard> {
   Future<void> _approve(BuildContext ctx) async {
     setState(() { _saving = true; _error = null; });
     try {
-      // 1. Si el reorderedText fue editado, actualizarlo primero
       final reorderedFinal = _reorderedCtrl.text.trim();
       final originalReordered = _extractReorderedText() ?? '';
+
+      // 1. Actualizar reorderedText si fue editado
       if (reorderedFinal != originalReordered && reorderedFinal.isNotEmpty) {
         await ApiService.patchCapture(_captureId, reorderedText: reorderedFinal);
       }
 
-      // 2. Si eligió usar el original en lugar del reformulado, rechazar el texto
-      // 3. Si cambió la categoría, patchearla
-      if (_selectedCategoryId != (widget.json['categoryId'] as int?)) {
+      // 2. Actualizar categoría si cambió
+      final originalCategoryId = _toInt(widget.json['categoryId']);
+      if (_selectedCategoryId != originalCategoryId) {
         await ApiService.patchCapture(_captureId, categoryId: _selectedCategoryId);
       }
 
-      // 4. Aprobar categoría; para texto, aprobar o rechazar según elección
-      final hasReordered = _reorderedCtrl.text.trim().isNotEmpty;
+      // 3. Aprobar según lo que el usuario eligió
+      final hasReordered = reorderedFinal.isNotEmpty;
       if (hasReordered && _useReordered) {
         await ApiService.approveCapture(_captureId, target: 'all');
       } else if (hasReordered && !_useReordered) {
-        // Aprobar categoría, rechazar texto (usar original)
         await ApiService.approveCapture(_captureId, target: 'category');
         await ApiService.rejectCapture(_captureId, target: 'text');
       } else {
-        // Sin texto reformulado → aprobar solo categoría
         await ApiService.approveCapture(_captureId, target: 'category');
       }
 
@@ -402,8 +435,14 @@ class _PendingCardState extends State<_PendingCard> {
                         decoration: InputDecoration(
                           contentPadding: const EdgeInsets.all(12),
                           border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          disabledBorder: InputBorder.none,
+                          filled: true,
+                          fillColor: Colors.transparent,
                           hintText: 'Sin texto reformulado',
-                          hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.25),
+                          hintStyle: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.25),
                               fontSize: 13),
                         ),
                       ),

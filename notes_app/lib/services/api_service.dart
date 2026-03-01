@@ -115,6 +115,7 @@ class ApiService {
   static Future<Map<String, dynamic>> createImage({
     required File imageFile,
     String? contextText,
+    int? categoryId,
   }) async {
     try {
       final request = http.MultipartRequest('POST', Uri.parse('$_baseUrl/image'));
@@ -125,6 +126,7 @@ class ApiService {
         contentType: MediaType.parse(imageMime),
       ));
       if (contextText != null && contextText.isNotEmpty) request.fields['contextText'] = contextText;
+      if (categoryId != null) request.fields['categoryId'] = categoryId.toString();
       final streamed = await request.send().timeout(_kTimeoutAudio);
       final response = await http.Response.fromStream(streamed);
       if (response.statusCode == 201) {
@@ -230,16 +232,32 @@ class ApiService {
     } on NotFoundException { rethrow; } on ServerException { rethrow;
     } catch (e) { throw NetworkException('Error inesperado: ${e.toString()}'); }
   }
-  // GET /captures/pending-category
+  // GET /captures/pending-category  →  capturas pendientes de revisar por el usuario
+  // El backend marca como UNCATEGORIZED cuando la IA no puede asignar categoría,
+  // y como PENDING mientras está procesando. Mostramos ambas (todo lo que no sea APPROVED).
   static Future<Map<String, dynamic>> getPendingCaptures({int page = 0, int size = 50}) async {
     try {
-      final uri = Uri.parse('$_baseUrl/captures/pending-category')
+      // Usamos el endpoint general que devuelve TODAS las capturas
+      final uri = Uri.parse('$_baseUrl/captures')
           .replace(queryParameters: {'page': '$page', 'size': '$size'});
       final response = await http.get(uri).timeout(_kTimeout);
       if (response.statusCode == 200) {
         final decoded = _safeDecodeBody(response);
-        if (decoded is Map<String, dynamic>) return decoded;
-        throw ServerException('Formato de respuesta inesperado.');
+        if (decoded is! Map<String, dynamic>) {
+          throw ServerException('Formato de respuesta inesperado.');
+        }
+        // Filtramos en cliente: solo las que NO están aprobadas
+        final allItems = (decoded['items'] as List<dynamic>? ?? [])
+            .whereType<Map<String, dynamic>>()
+            .where((item) {
+              final status = (item['categoryStatus'] as String? ?? '').toUpperCase();
+              return status != 'APPROVED';
+            })
+            .toList();
+        return {
+          'items': allItems,
+          'existMoreItems': decoded['existMoreItems'] ?? false,
+        };
       } else {
         throw ServerException('Error al obtener capturas pendientes (código ${response.statusCode}).');
       }

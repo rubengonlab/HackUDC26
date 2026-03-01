@@ -11,41 +11,41 @@ import '../../services/index.dart';
 // ─────────────────────────────────────────────────────────────────────────────
 // Punto de entrada
 // ─────────────────────────────────────────────────────────────────────────────
-void showNewNoteSheet(BuildContext context) {
+/// [onSaved] recibe true si la nota se guardó con categoría (aprobada), false si quedó pendiente.
+void showNewNoteSheet(BuildContext context, {void Function(bool approved)? onSaved}) {
   showModalBottomSheet(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    builder: (_) => const _NewNoteSheet(),
+    builder: (_) => _NewNoteSheet(onSaved: onSaved),
   );
 }
 
 /// Abre directamente el sheet en modo texto con [sharedUrl] prellenado.
-/// Usado cuando el usuario comparte un enlace desde otra app.
-void showSharedUrlSheet(BuildContext context, String sharedUrl) {
+void showSharedUrlSheet(BuildContext context, String sharedUrl, {void Function(bool approved)? onSaved}) {
   showModalBottomSheet(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    builder: (_) => _NewNoteSheet(initialSharedUrl: sharedUrl),
+    builder: (_) => _NewNoteSheet(initialSharedUrl: sharedUrl, onSaved: onSaved),
   );
 }
 
 /// Abre directamente el sheet en modo imagen con [sharedFile] prellenado.
-/// Usado cuando el usuario comparte una imagen desde la galería u otra app.
-void showSharedImageSheet(BuildContext context, File sharedFile) {
+void showSharedImageSheet(BuildContext context, File sharedFile, {void Function(bool approved)? onSaved}) {
   showModalBottomSheet(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    builder: (_) => _NewNoteSheet(initialSharedImage: sharedFile),
+    builder: (_) => _NewNoteSheet(initialSharedImage: sharedFile, onSaved: onSaved),
   );
 }
 
 class _NewNoteSheet extends StatefulWidget {
-  const _NewNoteSheet({this.initialSharedUrl, this.initialSharedImage});
+  const _NewNoteSheet({this.initialSharedUrl, this.initialSharedImage, this.onSaved});
   final String? initialSharedUrl;
   final File? initialSharedImage;
+  final void Function(bool approved)? onSaved;
   @override
   State<_NewNoteSheet> createState() => _NewNoteSheetState();
 }
@@ -67,6 +67,11 @@ class _NewNoteSheetState extends State<_NewNoteSheet> {
     }
   }
 
+  void _handleSaved(bool approved) {
+    Navigator.of(context).pop();
+    widget.onSaved?.call(approved);
+  }
+
   @override
   Widget build(BuildContext context) {
     return AnimatedSwitcher(
@@ -83,18 +88,18 @@ class _NewNoteSheetState extends State<_NewNoteSheet> {
         _SheetMode.text => _TextNoteView(
             key: const ValueKey('text'),
             onBack: () => setState(() => _mode = _SheetMode.picker),
-            onSaved: () => Navigator.of(context).pop(),
+            onSaved: _handleSaved,
             initialContent: widget.initialSharedUrl,
           ),
         _SheetMode.audio => _AudioNoteView(
             key: const ValueKey('audio'),
             onBack: () => setState(() => _mode = _SheetMode.picker),
-            onSaved: () => Navigator.of(context).pop(),
+            onSaved: _handleSaved,
           ),
         _SheetMode.image => _ImageNoteView(
             key: const ValueKey('image'),
             onBack: () => setState(() => _mode = _SheetMode.picker),
-            onSaved: () => Navigator.of(context).pop(),
+            onSaved: _handleSaved,
             initialFile: widget.initialSharedImage,
           ),
       },
@@ -247,7 +252,7 @@ class _TypeButton extends StatelessWidget {
 class _TextNoteView extends StatefulWidget {
   const _TextNoteView({super.key, required this.onBack, required this.onSaved, this.initialContent});
   final VoidCallback onBack;
-  final VoidCallback onSaved;
+  final void Function(bool approved) onSaved;
   final String? initialContent;
   @override
   State<_TextNoteView> createState() => _TextNoteViewState();
@@ -291,7 +296,7 @@ class _TextNoteViewState extends State<_TextNoteView> {
         categoryId: catId,
       );
       if (ctx.mounted) ctx.read<NotesProvider>().loadNotes();
-      widget.onSaved();
+      widget.onSaved(catId != null); // approved si se eligió categoría
     } on BadRequestException catch (e) {
       setState(() => _error = e.message);
     } on NotFoundException catch (e) {
@@ -425,7 +430,7 @@ class _TextNoteViewState extends State<_TextNoteView> {
 class _AudioNoteView extends StatefulWidget {
   const _AudioNoteView({super.key, required this.onBack, required this.onSaved});
   final VoidCallback onBack;
-  final VoidCallback onSaved;
+  final void Function(bool approved) onSaved;
   @override
   State<_AudioNoteView> createState() => _AudioNoteViewState();
 }
@@ -509,7 +514,7 @@ class _AudioNoteViewState extends State<_AudioNoteView> {
       final catId = int.tryParse(_selectedCategoryId ?? '');
       await ApiService.createAudio(audioFile: File(_recordedPath!), categoryId: catId);
       if (ctx.mounted) ctx.read<NotesProvider>().loadNotes();
-      widget.onSaved();
+      widget.onSaved(catId != null); // approved si se eligió categoría
     } on BadRequestException catch (e) {
       setState(() { _error = e.message; _state = _RecordState.recorded; });
     } on NotFoundException catch (e) {
@@ -747,7 +752,7 @@ class _AudioNoteViewState extends State<_AudioNoteView> {
 class _ImageNoteView extends StatefulWidget {
   const _ImageNoteView({super.key, required this.onBack, required this.onSaved, this.initialFile});
   final VoidCallback onBack;
-  final VoidCallback onSaved;
+  final void Function(bool approved) onSaved;
   final File? initialFile;
   @override
   State<_ImageNoteView> createState() => _ImageNoteViewState();
@@ -759,6 +764,7 @@ class _ImageNoteViewState extends State<_ImageNoteView> {
 
   File? _pickedFile;
   final _contextCtrl = TextEditingController();
+  String? _selectedCategoryId;
   bool _uploading = false;
   String? _error;
 
@@ -799,14 +805,14 @@ class _ImageNoteViewState extends State<_ImageNoteView> {
     if (_pickedFile == null) return;
     setState(() { _uploading = true; _error = null; });
     try {
+      final catId = int.tryParse(_selectedCategoryId ?? '');
       await ApiService.createImage(
         imageFile: _pickedFile!,
-        contextText: _contextCtrl.text.trim().isEmpty
-            ? null
-            : _contextCtrl.text.trim(),
+        contextText: _contextCtrl.text.trim().isEmpty ? null : _contextCtrl.text.trim(),
+        categoryId: catId,
       );
       if (ctx.mounted) ctx.read<NotesProvider>().loadNotes();
-      widget.onSaved();
+      widget.onSaved(catId != null); // approved si se eligió categoría
     } on BadRequestException catch (e) {
       setState(() { _error = e.message; _uploading = false; });
     } on NetworkException catch (e) {
@@ -820,6 +826,7 @@ class _ImageNoteViewState extends State<_ImageNoteView> {
 
   @override
   Widget build(BuildContext context) {
+    final categories = context.watch<CategoriesProvider>().getAllCategories();
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: Container(
@@ -918,6 +925,12 @@ class _ImageNoteViewState extends State<_ImageNoteView> {
               ),
 
             const SizedBox(height: 14),
+            _CategorySelector(
+              categories: categories,
+              selectedId: _selectedCategoryId,
+              onChanged: (id) => setState(() => _selectedCategoryId = id),
+            ),
+            const SizedBox(height: 12),
             _InputField(
               controller: _contextCtrl,
               hint: 'Descripción o contexto (opcional)',

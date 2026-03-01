@@ -20,6 +20,9 @@ class NotesProvider extends ChangeNotifier {
   List<String> _availableDays = [];
   bool _isLoadingFilters = false;
 
+  // Conteo de capturas pendientes de aprobar (para badge de campana)
+  int _pendingCount = 0;
+
   // ── Getters ──────────────────────────────────────────────────────────────
   List<Note> get allNotes => List.unmodifiable(_notes);
   bool get isLoading => _isLoading;
@@ -35,6 +38,7 @@ class NotesProvider extends ChangeNotifier {
   bool get isLoadingFilters => _isLoadingFilters;
   bool get hasActiveFilters =>
       _activeFileType != null || _activeCategoryId != null || _activeDate != null;
+  int get pendingCount => _pendingCount;
 
   // ── Agrupación ────────────────────────────────────────────────────────────
   void toggleGrouping(GroupBy g) {
@@ -86,8 +90,6 @@ class NotesProvider extends ChangeNotifier {
       final all = items
           .map((e) => Note.fromCaptureJson(e as Map<String, dynamic>))
           .toList();
-      // El back solo filtra por APPROVED cuando se pasa categoryId.
-      // Sin categoryId devuelve todo → filtramos aquí para mostrar solo aprobadas.
       _notes = _activeCategoryId != null
           ? all
           : all.where((n) => n.categoryStatus == CategoryStatus.approved).toList();
@@ -97,6 +99,22 @@ class NotesProvider extends ChangeNotifier {
     } finally {
       _isLoading = false;
       notifyListeners();
+    }
+    // Actualizar badge sin bloquear la UI
+    refreshPendingCount();
+  }
+
+  // ── Recarga solo el conteo de pendientes (badge campana) ─────────────────
+  Future<void> refreshPendingCount({bool withDelay = false}) async {
+    // Si viene de una creación nueva, esperamos a que el back procese IA/OCR
+    if (withDelay) await Future.delayed(const Duration(seconds: 4));
+    try {
+      final result = await ApiService.getPendingCaptures(size: 100);
+      final items = result['items'] as List<dynamic>? ?? [];
+      _pendingCount = items.length;
+      notifyListeners();
+    } catch (_) {
+      // Silencioso: el badge simplemente no se actualiza
     }
   }
 
